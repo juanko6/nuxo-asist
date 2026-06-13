@@ -78,6 +78,57 @@ export interface AttendanceCorrection {
   reason: string;
 }
 
+// HU-05: horarios y cargas horarias
+export interface ScheduleTemplateDay {
+  weekday: number; // ISO: 1=lunes … 7=domingo
+  start_time: string;
+  end_time: string;
+}
+
+export interface ScheduleTemplateSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  weekly_minutes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScheduleTemplateDetail extends ScheduleTemplateSummary {
+  days: ScheduleTemplateDay[];
+}
+
+export interface CreateScheduleTemplateDTO {
+  name: string;
+  description?: string;
+  days: ScheduleTemplateDay[];
+}
+
+export interface EmployeeSchedule {
+  id: string;
+  employee_id: string;
+  template_id: string;
+  valid_from: string;
+  valid_to: string | null;
+  created_at: string;
+}
+
+export interface EmployeeScheduleActive extends EmployeeSchedule {
+  template_name: string;
+  weekly_minutes: number;
+  days: ScheduleTemplateDay[];
+}
+
+export interface EmployeeScheduleView {
+  active: EmployeeScheduleActive | null;
+  history: (EmployeeSchedule & { template_name?: string })[];
+}
+
+export interface AssignScheduleDTO {
+  template_id: string;
+  valid_from: string;
+}
+
 // Notification Types
 export interface Notification {
   id: string;

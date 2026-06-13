@@ -45,6 +45,33 @@ export interface AttendanceAuditEntry {
   created_at: Date;
 }
 
+/** Bloque de trabajo en un día. weekday ISO: 1=lunes … 7=domingo. */
+export interface ScheduleTemplateDay {
+  id: string;
+  template_id: string;
+  weekday: number;
+  start_time: string; // 'HH:MM:SS'
+  end_time: string;
+  created_at: Date;
+}
+
+export interface ScheduleTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface EmployeeSchedule {
+  id: string;
+  employee_id: string;
+  template_id: string;
+  valid_from: string; // 'YYYY-MM-DD'
+  valid_to: string | null;
+  created_at: Date;
+}
+
 declare module 'fastify' {
   interface FastifyInstance {
     pg: Pool;

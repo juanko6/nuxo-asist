@@ -21,6 +21,8 @@ tags:
     description: Gestión de empleados (solo admin)
   - name: attendance
     description: Fichaje de entrada/salida y horas extra
+  - name: schedules
+    description: Plantillas de horario y asignación por empleado (solo admin)
   - name: notifications
     description: Notificaciones para el administrador
   - name: login-logs
@@ -517,6 +519,157 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /schedule-templates:
+    get:
+      tags: [schedules]
+      summary: Listar plantillas de horario
+      description: Solo admin. Cada plantilla incluye su carga horaria semanal en minutos.
+      operationId: listScheduleTemplates
+      responses:
+        '200':
+          description: Plantillas con carga semanal
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleTemplateSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [schedules]
+      summary: Crear una plantilla de horario
+      description: |
+        Solo admin. Define los bloques de trabajo por día (weekday ISO 1=lunes…7=domingo).
+        Un `end_time` menor o igual al `start_time` indica turno nocturno.
+      operationId: createScheduleTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleTemplate'
+      responses:
+        '201':
+          description: Plantilla creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleTemplateDetail'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Ya existe una plantilla con ese nombre
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schedule-templates/{id}:
+    get:
+      tags: [schedules]
+      summary: Detalle de una plantilla
+      operationId: getScheduleTemplate
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Plantilla con días y carga semanal
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleTemplateDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [schedules]
+      summary: Eliminar una plantilla
+      description: Solo admin. Falla con 409 si está asignada a algún empleado.
+      operationId: deleteScheduleTemplate
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Plantilla eliminada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: La plantilla está en uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /employees/{id}/schedule:
+    get:
+      tags: [schedules]
+      summary: Horario de un empleado (activo e histórico)
+      operationId: getEmployeeSchedule
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Asignación activa y su historial de vigencias
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeScheduleView'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [schedules]
+      summary: Asignar un horario a un empleado
+      description: |
+        Solo admin. Asigna una plantilla desde `valid_from`. Cierra automáticamente
+        la asignación vigente anterior (su `valid_to` pasa a ser el día previo), de
+        modo que los informes pasados no se alteran.
+      operationId: assignEmployeeSchedule
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignSchedule'
+      responses:
+        '201':
+          description: Horario asignado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeSchedule'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: La nueva vigencia no empieza después de la actual
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /notifications:
     get:
       tags: [notifications]
@@ -844,6 +997,127 @@ components:
           type: string
           minLength: 3
           description: Motivo de la corrección (obligatorio por trazabilidad legal)
+
+    ScheduleTemplateDay:
+      type: object
+      required: [weekday, start_time, end_time]
+      properties:
+        weekday:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: 'Día ISO: 1=lunes … 7=domingo'
+        start_time:
+          type: string
+          example: '09:00'
+        end_time:
+          type: string
+          example: '17:00'
+
+    ScheduleTemplateSummary:
+      type: object
+      required: [id, name, description, weekly_minutes, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: ['string', 'null']
+        weekly_minutes:
+          type: integer
+          description: Carga horaria semanal esperada, en minutos
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ScheduleTemplateDetail:
+      allOf:
+        - $ref: '#/components/schemas/ScheduleTemplateSummary'
+        - type: object
+          required: [days]
+          properties:
+            days:
+              type: array
+              items:
+                $ref: '#/components/schemas/ScheduleTemplateDay'
+
+    CreateScheduleTemplate:
+      type: object
+      required: [name, days]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        days:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ScheduleTemplateDay'
+
+    EmployeeSchedule:
+      type: object
+      required: [id, employee_id, template_id, valid_from, valid_to, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        employee_id:
+          type: string
+          format: uuid
+        template_id:
+          type: string
+          format: uuid
+        valid_from:
+          type: string
+          format: date
+        valid_to:
+          type: ['string', 'null']
+          format: date
+        created_at:
+          type: string
+          format: date-time
+
+    EmployeeScheduleView:
+      type: object
+      required: [active, history]
+      properties:
+        active:
+          oneOf:
+            - type: 'null'
+            - allOf:
+                - $ref: '#/components/schemas/EmployeeSchedule'
+                - type: object
+                  properties:
+                    template_name:
+                      type: string
+                    weekly_minutes:
+                      type: integer
+                    days:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/ScheduleTemplateDay'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmployeeSchedule'
+
+    AssignSchedule:
+      type: object
+      required: [template_id, valid_from]
+      properties:
+        template_id:
+          type: string
+          format: uuid
+        valid_from:
+          type: string
+          format: date
 
     Notification:
       type: object

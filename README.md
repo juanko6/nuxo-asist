@@ -133,6 +133,12 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 | POST | `/api/v1/attendance/check-out` | empleado | Fichar salida |
 | POST | `/api/v1/attendance/:id/overtime/request` | empleado dueño | Solicitar horas extra (notifica al admin) |
 | POST | `/api/v1/attendance/:id/overtime/approve` | admin | Aprobar horas extra |
+| GET/POST | `/api/v1/attendance/pause/start` · `/pause/end` | empleado | Pausar / reanudar la jornada |
+| GET/PATCH | `/api/v1/attendance/:id` | dueño/admin | Detalle con pausas y auditoría / corregir (admin) |
+| GET | `/api/v1/attendance/export.csv` | admin | Exportar asistencia en CSV (inspección) |
+| GET/POST | `/api/v1/schedule-templates` | admin | Listar / crear plantillas de horario |
+| GET/DELETE | `/api/v1/schedule-templates/:id` | admin | Detalle / eliminar plantilla |
+| GET/POST | `/api/v1/employees/:id/schedule` | admin | Horario del empleado / asignar con vigencia |
 | GET | `/api/v1/notifications` | admin | Notificaciones |
 | DELETE | `/api/v1/notifications/:id` | admin | Eliminar notificación |
 | GET | `/api/v1/login-logs` | admin | Registro de logins |
@@ -150,6 +156,11 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 - **Pausas intrajornada**: el empleado puede pausar (comida, café) y reanudar; solo se permite una pausa abierta a la vez y no se puede fichar salida con una pausa abierta. El tiempo pausado se descuenta de los minutos trabajados.
 - **Registros inalterables**: corregir un fichaje (`PATCH /attendance/:id`, solo admin) **no destruye** el valor anterior; lo conserva en la tabla de auditoría `attendance_audit` (append-only) junto con quién, cuándo y un **motivo obligatorio**.
 - **Export para inspección**: `GET /attendance/export.csv` (admin) genera un CSV con entrada, salida, minutos de pausa y trabajados, horas extra y si el registro fue corregido.
+
+### Horarios y cargas horarias (HU-05)
+
+- **Plantillas de horario**: bloques de trabajo por día (ISO 1=lunes…7=domingo); un `end_time` ≤ `start_time` es un turno nocturno. La carga horaria semanal esperada se calcula automáticamente.
+- **Asignación con vigencias**: al asignar un horario desde una fecha, la asignación anterior se cierra el día previo (`valid_to`), de modo que los informes pasados no se alteran. Un horario "personalizado" de un empleado se modela como una plantilla dedicada.
 
 ## Migraciones de base de datos
 
@@ -203,7 +214,7 @@ El backlog funcional detallado está en [docs/historias-usuario.md](docs/histori
 - [x] **Fase 1** — Backend propio (Fastify + PostgreSQL), bcrypt + JWT, contrato OpenAPI, TDD
 - [x] **Fase 2** ([#1](https://github.com/sefogi/asist_employed/issues/1)) — Dockerización completa (frontend + API + BD + nginx) para un solo servidor
 - [x] **Fase 3** ([#2](https://github.com/sefogi/asist_employed/issues/2)) — CI/CD con GitHub Actions (lint + tests + build de imágenes); deploy a servidor pendiente de infraestructura
-- [ ] **Fase 4** ([#3](https://github.com/sefogi/asist_employed/issues/3)) — Núcleo legal del registro horario: pausas + auditoría inalterable + export (HU-04), horarios y cargas horarias (HU-05)
+- [x] **Fase 4** ([#3](https://github.com/sefogi/asist_employed/issues/3)) — Núcleo legal del registro horario: pausas + auditoría inalterable + export (HU-04), horarios y cargas horarias (HU-05)
 - [ ] **Fase 5** ([#4](https://github.com/sefogi/asist_employed/issues/4)) — Incidencias y automatización: registro olvidado (HU-02), cierre automático de turno (HU-03), ausencias injustificadas + módulo de vacaciones/bajas + email (HU-01)
 - [ ] **Fase 6** ([#5](https://github.com/sefogi/asist_employed/issues/5)) — Rediseño UX/UI (mobile-first, routing, sistema de diseño) + confirmación de acciones (HU-06)
 - [ ] **Fase 7** ([#6](https://github.com/sefogi/asist_employed/issues/6)) — Hardening: HTTPS, backups automáticos (retención 4 años), rate-limiting

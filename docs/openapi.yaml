@@ -361,6 +361,162 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /attendance/pause/start:
+    post:
+      tags: [attendance]
+      summary: Iniciar una pausa
+      description: |
+        Solo empleados. Abre una pausa (comida, café) sobre la jornada abierta de hoy.
+        Falla con 409 si no hay jornada abierta o si ya existe una pausa abierta.
+      operationId: startPause
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 200
+      responses:
+        '201':
+          description: Pausa iniciada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendancePause'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: No hay jornada abierta o ya hay una pausa abierta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /attendance/pause/end:
+    post:
+      tags: [attendance]
+      summary: Reanudar (cerrar la pausa abierta)
+      description: Solo empleados. Cierra la pausa abierta de la jornada en curso.
+      operationId: endPause
+      responses:
+        '200':
+          description: Pausa reanudada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendancePause'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: No hay una pausa abierta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /attendance/export.csv:
+    get:
+      tags: [attendance]
+      summary: Exportar asistencia en CSV (inspección)
+      description: |
+        Solo admin. Devuelve un CSV con los registros del rango indicado: fecha,
+        entrada, salida, minutos de pausa, minutos trabajados, horas extra y si el
+        registro fue corregido. Formato verificable para la Inspección de Trabajo.
+      operationId: exportAttendanceCsv
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Fecha inicial inclusive (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fecha final inclusive (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Fichero CSV
+          content:
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /attendance/{id}:
+    get:
+      tags: [attendance]
+      summary: Detalle de un registro de asistencia
+      description: |
+        Admin, o el empleado dueño del registro. Incluye las pausas, los minutos
+        de pausa y trabajados, y el historial de auditoría de correcciones.
+      operationId: getAttendance
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Registro con pausas y auditoría
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [attendance]
+      summary: Corregir un registro (con motivo obligatorio)
+      description: |
+        Solo admin. Corrige `check_in` y/o `check_out`. No destruye el valor previo:
+        registra la corrección en la auditoría append-only con el motivo indicado.
+      operationId: correctAttendance
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceCorrection'
+      responses:
+        '200':
+          description: Registro corregido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceRecord'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: La corrección es inconsistente o no cambia nada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /notifications:
     get:
       tags: [notifications]
@@ -598,6 +754,96 @@ components:
         created_at:
           type: string
           format: date-time
+
+    AttendancePause:
+      type: object
+      required: [id, attendance_id, pause_start, pause_end, reason, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        attendance_id:
+          type: string
+          format: uuid
+        pause_start:
+          type: string
+          format: date-time
+        pause_end:
+          type: ['string', 'null']
+          format: date-time
+        reason:
+          type: ['string', 'null']
+        created_at:
+          type: string
+          format: date-time
+
+    AttendanceAuditEntry:
+      type: object
+      required: [id, attendance_id, actor_id, actor_name, action, reason, changes, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        attendance_id:
+          type: ['string', 'null']
+          format: uuid
+        actor_id:
+          type: ['string', 'null']
+          format: uuid
+        actor_name:
+          type: string
+        action:
+          type: string
+          enum: [correction, manual_create, system_close]
+        reason:
+          type: string
+        changes:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              old: {}
+              new: {}
+        created_at:
+          type: string
+          format: date-time
+
+    AttendanceDetail:
+      allOf:
+        - $ref: '#/components/schemas/AttendanceRecord'
+        - type: object
+          required: [pauses, pause_minutes, worked_minutes, audit]
+          properties:
+            pauses:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttendancePause'
+            pause_minutes:
+              type: integer
+              description: Minutos pausados (pausas abiertas contadas hasta ahora)
+            worked_minutes:
+              type: ['integer', 'null']
+              description: Minutos trabajados netos; null si la jornada sigue abierta
+            audit:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttendanceAuditEntry'
+
+    AttendanceCorrection:
+      type: object
+      required: [reason]
+      description: Al menos uno de check_in o check_out debe indicarse.
+      properties:
+        check_in:
+          type: string
+          format: date-time
+        check_out:
+          type: ['string', 'null']
+          format: date-time
+        reason:
+          type: string
+          minLength: 3
+          description: Motivo de la corrección (obligatorio por trazabilidad legal)
 
     Notification:
       type: object

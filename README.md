@@ -145,6 +145,12 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 - "Hoy" se evalúa en la zona horaria de `APP_TIMEZONE` (formato IANA, p. ej. `Europe/Madrid`).
 - Al solicitar horas extra se crea automáticamente una notificación para el admin, ligada al registro de asistencia; al aprobarlas, la notificación se elimina.
 
+### Pausas y trazabilidad (HU-04, Ley de control horario 2026)
+
+- **Pausas intrajornada**: el empleado puede pausar (comida, café) y reanudar; solo se permite una pausa abierta a la vez y no se puede fichar salida con una pausa abierta. El tiempo pausado se descuenta de los minutos trabajados.
+- **Registros inalterables**: corregir un fichaje (`PATCH /attendance/:id`, solo admin) **no destruye** el valor anterior; lo conserva en la tabla de auditoría `attendance_audit` (append-only) junto con quién, cuándo y un **motivo obligatorio**.
+- **Export para inspección**: `GET /attendance/export.csv` (admin) genera un CSV con entrada, salida, minutos de pausa y trabajados, horas extra y si el registro fue corregido.
+
 ## Migraciones de base de datos
 
 El esquema está versionado con migraciones SQL planas (estilo Flyway, *roll-forward*):

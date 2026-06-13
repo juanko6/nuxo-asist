@@ -58,9 +58,33 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+/** Descarga binaria/texto (p. ej. CSV); no parsea JSON. */
+async function requestBlob(path: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = tokenStorage.get();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const res = await fetch(`${API_URL}${path}`, { method: 'GET', headers });
+  if (!res.ok) {
+    let code = 'UNKNOWN';
+    let message = `Error ${res.status}`;
+    try {
+      const err = (await res.json())?.error;
+      if (err?.code) code = err.code;
+      if (err?.message) message = err.message;
+    } catch {
+      // sin cuerpo JSON
+    }
+    throw new ApiError(message, code, res.status);
+  }
+  return res.blob();
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', path, body),
   delete: <T>(path: string) => request<T>('DELETE', path),
+  getBlob: (path: string) => requestBlob(path),
 };

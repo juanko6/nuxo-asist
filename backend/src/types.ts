@@ -25,6 +25,26 @@ export interface AttendanceRecord {
   created_at: Date;
 }
 
+export interface AttendancePause {
+  id: string;
+  attendance_id: string;
+  pause_start: Date;
+  pause_end: Date | null;
+  reason: string | null;
+  created_at: Date;
+}
+
+export interface AttendanceAuditEntry {
+  id: string;
+  attendance_id: string | null;
+  actor_id: string | null;
+  actor_name: string;
+  action: 'correction' | 'manual_create' | 'system_close';
+  reason: string;
+  changes: Record<string, { old: unknown; new: unknown }>;
+  created_at: Date;
+}
+
 declare module 'fastify' {
   interface FastifyInstance {
     pg: Pool;

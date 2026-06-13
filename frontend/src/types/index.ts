@@ -42,6 +42,42 @@ export interface AttendanceRecord {
   created_at?: string;
 }
 
+// HU-04: pausas intrajornada
+export interface AttendancePause {
+  id: string;
+  attendance_id: string;
+  pause_start: string;
+  pause_end: string | null;
+  reason: string | null;
+  created_at: string;
+}
+
+// HU-04: huella de auditoría de correcciones (append-only)
+export interface AttendanceAuditEntry {
+  id: string;
+  attendance_id: string | null;
+  actor_id: string | null;
+  actor_name: string;
+  action: 'correction' | 'manual_create' | 'system_close';
+  reason: string;
+  changes: Record<string, { old: unknown; new: unknown }>;
+  created_at: string;
+}
+
+// HU-04: detalle de un registro con pausas y auditoría
+export interface AttendanceDetail extends AttendanceRecord {
+  pauses: AttendancePause[];
+  pause_minutes: number;
+  worked_minutes: number | null;
+  audit: AttendanceAuditEntry[];
+}
+
+export interface AttendanceCorrection {
+  check_in?: string;
+  check_out?: string | null;
+  reason: string;
+}
+
 // Notification Types
 export interface Notification {
   id: string;

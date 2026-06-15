@@ -35,6 +35,11 @@ services:
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
       APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Madrid}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      AUTO_CLOSE_ENABLED: ${AUTO_CLOSE_ENABLED:-true}
+      AUTO_CLOSE_CRON: ${AUTO_CLOSE_CRON:-*/5 * * * *}
+      AUTO_CLOSE_WARN_MINUTES: ${AUTO_CLOSE_WARN_MINUTES:-15}
+      AUTO_CLOSE_GRACE_MINUTES: ${AUTO_CLOSE_GRACE_MINUTES:-30}
+      MAX_SHIFT_HOURS: ${MAX_SHIFT_HOURS:-12}
     depends_on:
       db:
         condition: service_healthy

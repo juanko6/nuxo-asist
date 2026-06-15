@@ -170,6 +170,14 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 - El empleado puede crear una **entrada manual** (`POST /attendance/manual`) si olvidó fichar: nace como `manual` + `pending_validation`, no puede tener hora futura ni solaparse con otro fichaje, y deja huella en la auditoría.
 - El responsable la **valida** (`POST /attendance/:id/validate`, aprobar/rechazar), lo que también queda auditado.
 
+### Cierre automático de turnos (HU-03)
+
+- Un **scheduler** en el propio API (node-cron, `AUTO_CLOSE_CRON`) revisa las jornadas abiertas:
+  - Pasada la hora teórica de salida + `AUTO_CLOSE_WARN_MINUTES`, avisa una vez al empleado ("¿Sigues trabajando?").
+  - Pasada la hora teórica + `AUTO_CLOSE_GRACE_MINUTES`, **cierra el turno** a la hora teórica de fin y lo registra como `system_close` en la auditoría.
+- La hora teórica sale del **horario activo** del empleado (HU-05); si no tiene horario, se usa `MAX_SHIFT_HOURS` como red de seguridad. Soporta turnos nocturnos (la hora de fin cae al día siguiente).
+- El cierre ocurre en el backend, **independientemente de si la app del empleado está abierta**. Se puede desactivar con `AUTO_CLOSE_ENABLED=false`.
+
 ## Migraciones de base de datos
 
 El esquema está versionado con migraciones SQL planas (estilo Flyway, *roll-forward*):

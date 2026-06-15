@@ -20,6 +20,11 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     appTimezone: 'UTC',
     logLevel: 'silent',
     logger: false,
+    autoCloseEnabled: false,
+    autoCloseCron: '*/5 * * * *',
+    autoCloseWarnMinutes: 15,
+    autoCloseGraceMinutes: 30,
+    maxShiftHours: 12,
     ...overrides,
   };
 }

@@ -266,6 +266,7 @@ El backlog funcional detallado está en [docs/historias-usuario.md](docs/histori
 - [x] **Fase 5** ([#4](https://github.com/sefogi/asist_employed/issues/4)) — Incidencias y automatización: registro olvidado (HU-02), cierre automático de turno (HU-03), ausencias injustificadas + módulo de vacaciones/bajas (HU-01; email preparado para Fase 7)
 - [x] **Fase 6** ([#5](https://github.com/sefogi/asist_employed/issues/5)) — Rediseño UX/UI (mobile-first, routing, sistema de diseño) + confirmación de acciones con hora de intención (HU-06)
 - [x] **Fase 7** ([#6](https://github.com/sefogi/asist_employed/issues/6)) — Hardening: rate-limiting + helmet, email real (SMTP), backups con retención 4 años, HTTPS con Caddy
+- [ ] **Despliegue** ([#8](https://github.com/sefogi/asist_employed/issues/8)) — Oracle Cloud con Terraform (red + Ampere A1 capa gratuita); IaC en [`infra/oracle/`](infra/oracle/)
 - [ ] **Fase 8** ([#7](https://github.com/sefogi/asist_employed/issues/7)) — Avanzadas: geolocalización RGPD (HU-07), modo kiosco PIN/QR (HU-08)
 
 ## Licencia

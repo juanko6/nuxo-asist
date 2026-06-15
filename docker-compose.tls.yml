@@ -1,0 +1,29 @@
+# HTTPS en producción con Caddy (certificados automáticos de Let's Encrypt).
+# Requiere un dominio público (PUBLIC_DOMAIN en el .env) y los puertos 80/443.
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d
+name: asist_employed
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?define PUBLIC_DOMAIN en .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+  # Detrás de Caddy, la web solo necesita ser accesible en la red interna.
+  web:
+    ports: !reset []
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -16,6 +16,11 @@ const EnvSchema = z.object({
   AUTO_CLOSE_WARN_MINUTES: z.coerce.number().int().min(0).default(15),
   AUTO_CLOSE_GRACE_MINUTES: z.coerce.number().int().min(0).default(30),
   MAX_SHIFT_HOURS: z.coerce.number().int().min(1).default(12),
+  // HU-01: detección de ausencias injustificadas
+  ABSENCE_CHECK_ENABLED: z.string().default('true').transform((v) => v.toLowerCase() !== 'false'),
+  ABSENCE_CHECK_CRON: z.string().default('0 6 * * *'),
+  // Envío de email (de momento deshabilitado; el aviso efectivo es in-app)
+  EMAIL_ENABLED: z.string().default('false').transform((v) => v.toLowerCase() === 'true'),
 });
 
 export interface AppConfig {
@@ -34,6 +39,9 @@ export interface AppConfig {
   autoCloseWarnMinutes: number;
   autoCloseGraceMinutes: number;
   maxShiftHours: number;
+  absenceCheckEnabled: boolean;
+  absenceCheckCron: string;
+  emailEnabled: boolean;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -61,5 +69,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     autoCloseWarnMinutes: e.AUTO_CLOSE_WARN_MINUTES,
     autoCloseGraceMinutes: e.AUTO_CLOSE_GRACE_MINUTES,
     maxShiftHours: e.MAX_SHIFT_HOURS,
+    absenceCheckEnabled: e.ABSENCE_CHECK_ENABLED,
+    absenceCheckCron: e.ABSENCE_CHECK_CRON,
+    emailEnabled: e.EMAIL_ENABLED,
   };
 }

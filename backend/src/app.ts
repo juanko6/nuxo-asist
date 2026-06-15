@@ -15,6 +15,7 @@ import { authRoutes } from './routes/auth.js';
 import { employeesRoutes } from './routes/employees.js';
 import { attendanceRoutes } from './routes/attendance.js';
 import { schedulesRoutes } from './routes/schedules.js';
+import { absencesRoutes } from './routes/absences.js';
 import { notificationsRoutes } from './routes/notifications.js';
 import { loginLogsRoutes } from './routes/loginLogs.js';
 import type { SafeUser } from './types.js';
@@ -121,6 +122,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(employeesRoutes, { prefix: '/api/v1' });
   await app.register(attendanceRoutes, { prefix: '/api/v1' });
   await app.register(schedulesRoutes, { prefix: '/api/v1' });
+  await app.register(absencesRoutes, { prefix: '/api/v1' });
   await app.register(notificationsRoutes, { prefix: '/api/v1' });
   await app.register(loginLogsRoutes, { prefix: '/api/v1' });
 

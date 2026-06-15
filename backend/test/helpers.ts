@@ -25,6 +25,9 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     autoCloseWarnMinutes: 15,
     autoCloseGraceMinutes: 30,
     maxShiftHours: 12,
+    absenceCheckEnabled: false,
+    absenceCheckCron: '0 6 * * *',
+    emailEnabled: false,
     ...overrides,
   };
 }

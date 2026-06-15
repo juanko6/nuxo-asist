@@ -77,6 +77,19 @@ export interface EmployeeSchedule {
   created_at: Date;
 }
 
+export type AbsenceType = 'vacation' | 'sick_leave' | 'leave' | 'other';
+
+export interface Absence {
+  id: string;
+  employee_id: string;
+  type: AbsenceType;
+  start_date: string; // 'YYYY-MM-DD'
+  end_date: string;
+  reason: string | null;
+  created_by: string | null;
+  created_at: Date;
+}
+
 declare module 'fastify' {
   interface FastifyInstance {
     pg: Pool;

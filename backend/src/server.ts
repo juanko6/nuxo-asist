@@ -4,6 +4,8 @@ import { loadConfig } from './config.js';
 import { buildApp } from './app.js';
 import { runMigrations } from './db/migrate.js';
 import { processAutoClose } from './lib/autoClose.js';
+import { detectAbsences } from './lib/absences.js';
+import { sendAbsenceEmail } from './lib/email.js';
 
 const config = loadConfig();
 const app = await buildApp(config);
@@ -34,6 +36,26 @@ try {
         .catch((err) => app.log.error(err, 'Fallo en el cierre automático'));
     });
     app.log.info(`Cierre automático activo (cron: ${config.autoCloseCron})`);
+  }
+
+  // HU-01: detección diaria de ausencias injustificadas (del día anterior)
+  if (config.absenceCheckEnabled) {
+    cron.schedule(config.absenceCheckCron, () => {
+      detectAbsences(app.pg, { timezone: config.appTimezone })
+        .then(async (flagged) => {
+          if (flagged.length > 0) {
+            app.log.info(`Ausencias injustificadas detectadas: ${flagged.length}`);
+          }
+          // Email best-effort (hoy stub; el aviso efectivo es la notificación in-app)
+          for (const f of flagged) {
+            await sendAbsenceEmail(config, f).catch((err) =>
+              app.log.error(err, 'Fallo enviando email de ausencia')
+            );
+          }
+        })
+        .catch((err) => app.log.error(err, 'Fallo en la detección de ausencias'));
+    });
+    app.log.info(`Detección de ausencias activa (cron: ${config.absenceCheckCron})`);
   }
 } catch (err) {
   app.log.error(err);

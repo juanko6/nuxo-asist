@@ -23,6 +23,8 @@ tags:
     description: Fichaje de entrada/salida y horas extra
   - name: schedules
     description: Plantillas de horario y asignación por empleado (solo admin)
+  - name: absences
+    description: Ausencias (vacaciones, bajas, permisos)
   - name: notifications
     description: Notificaciones para el administrador
   - name: login-logs
@@ -744,6 +746,75 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /absences:
+    get:
+      tags: [absences]
+      summary: Listar ausencias
+      description: El admin ve todas (filtrables por empleado); un empleado solo las suyas.
+      operationId: listAbsences
+      parameters:
+        - name: employee_id
+          in: query
+          required: false
+          description: Filtra por empleado (solo admin)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Ausencias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Absence'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [absences]
+      summary: Registrar una ausencia
+      description: Solo admin. Registra vacaciones, baja médica o permiso de un empleado.
+      operationId: createAbsence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAbsence'
+      responses:
+        '201':
+          description: Ausencia creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Absence'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /absences/{id}:
+    delete:
+      tags: [absences]
+      summary: Eliminar una ausencia
+      operationId: deleteAbsence
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '204':
+          description: Ausencia eliminada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /notifications:
     get:
       tags: [notifications]
@@ -1226,6 +1297,54 @@ components:
           type: string
           format: date
 
+    Absence:
+      type: object
+      required: [id, employee_id, type, start_date, end_date, reason, created_by, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        employee_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [vacation, sick_leave, leave, other]
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        reason:
+          type: ['string', 'null']
+        created_by:
+          type: ['string', 'null']
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    CreateAbsence:
+      type: object
+      required: [employee_id, type, start_date, end_date]
+      properties:
+        employee_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [vacation, sick_leave, leave, other]
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        reason:
+          type: string
+          maxLength: 300
+
     Notification:
       type: object
       required: [id, employee_id, employee_name, attendance_id, message, type, read, timestamp]
@@ -1246,7 +1365,7 @@ components:
           type: string
         type:
           type: string
-          enum: [overtime_request, approval, info]
+          enum: [overtime_request, approval, info, absence]
         read:
           type: boolean
         timestamp:

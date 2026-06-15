@@ -40,6 +40,9 @@ services:
       AUTO_CLOSE_WARN_MINUTES: ${AUTO_CLOSE_WARN_MINUTES:-15}
       AUTO_CLOSE_GRACE_MINUTES: ${AUTO_CLOSE_GRACE_MINUTES:-30}
       MAX_SHIFT_HOURS: ${MAX_SHIFT_HOURS:-12}
+      ABSENCE_CHECK_ENABLED: ${ABSENCE_CHECK_ENABLED:-true}
+      ABSENCE_CHECK_CRON: ${ABSENCE_CHECK_CRON:-0 6 * * *}
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
     depends_on:
       db:
         condition: service_healthy

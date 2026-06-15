@@ -1,0 +1,18 @@
+# Copia este fichero a terraform.tfvars y rellena tus valores.
+# terraform.tfvars está git-ignored: NUNCA lo subas (contiene rutas a tu clave).
+
+tenancy_ocid     = "ocid1.tenancy.oc1..xxxxxxxx"
+user_ocid        = "ocid1.user.oc1..xxxxxxxx"
+fingerprint      = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99"
+private_key_path = "C:/Users/tu_usuario/.oci/oci_api_key.pem"
+region           = "eu-madrid-1"
+
+# Puedes usar el OCID de la tenancy como compartimento (raíz)
+compartment_ocid = "ocid1.tenancy.oc1..xxxxxxxx"
+
+# Contenido de tu clave pública SSH (ssh-ed25519 ... o ssh-rsa ...)
+ssh_public_key = "ssh-ed25519 AAAAC3Nza... tu_correo"
+
+# Opcionales:
+# availability_domain_index = 0          # si 'Out of host capacity', prueba 1 o 2
+# ssh_ingress_cidr          = "TU.IP.PUBLICA/32"   # restringe el SSH a tu IP

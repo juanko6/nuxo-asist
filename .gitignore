@@ -28,3 +28,11 @@ dist-ssr
 
 # Claude Code local
 .claude/scheduled_tasks.lock
+
+# Terraform (estado y variables con secretos; el .lock.hcl sí se versiona)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+**/terraform.tfvars
+crash.log
+crash.*.log

@@ -21,6 +21,11 @@ const EnvSchema = z.object({
   ABSENCE_CHECK_CRON: z.string().default('0 6 * * *'),
   // Envío de email (de momento deshabilitado; el aviso efectivo es in-app)
   EMAIL_ENABLED: z.string().default('false').transform((v) => v.toLowerCase() === 'true'),
+  // Rate limiting (HU hardening)
+  RATE_LIMIT_ENABLED: z.string().default('true').transform((v) => v.toLowerCase() !== 'false'),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+  RATE_LIMIT_WINDOW: z.string().default('1 minute'),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
 });
 
 export interface AppConfig {
@@ -42,6 +47,10 @@ export interface AppConfig {
   absenceCheckEnabled: boolean;
   absenceCheckCron: string;
   emailEnabled: boolean;
+  rateLimitEnabled: boolean;
+  rateLimitMax: number;
+  rateLimitWindow: string;
+  authRateLimitMax: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -72,5 +81,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     absenceCheckEnabled: e.ABSENCE_CHECK_ENABLED,
     absenceCheckCron: e.ABSENCE_CHECK_CRON,
     emailEnabled: e.EMAIL_ENABLED,
+    rateLimitEnabled: e.RATE_LIMIT_ENABLED,
+    rateLimitMax: e.RATE_LIMIT_MAX,
+    rateLimitWindow: e.RATE_LIMIT_WINDOW,
+    authRateLimitMax: e.AUTH_RATE_LIMIT_MAX,
   };
 }

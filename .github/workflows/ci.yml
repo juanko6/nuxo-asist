@@ -39,6 +39,11 @@ jobs:
       - name: Build
         run: pnpm -r build
 
+      - name: Auditoría de dependencias
+        # Informativo: avisa de vulnerabilidades altas/críticas sin bloquear el merge
+        continue-on-error: true
+        run: pnpm audit --audit-level high
+
   test:
     name: Tests backend (Postgres real)
     runs-on: ubuntu-latest

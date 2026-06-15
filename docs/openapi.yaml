@@ -261,6 +261,12 @@ paths:
         Solo empleados. Crea el registro del día con `check_in` fijado por el servidor.
         Falla con 409 si ya existe un registro de entrada para hoy.
       operationId: checkIn
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FichajeIntent'
       responses:
         '201':
           description: Entrada registrada
@@ -287,6 +293,12 @@ paths:
         Solo empleados. Cierra el registro abierto de hoy con `check_out` fijado por el servidor.
         Falla con 409 si no hay registro abierto hoy.
       operationId: checkOut
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FichajeIntent'
       responses:
         '200':
           description: Salida registrada
@@ -457,6 +469,9 @@ paths:
                 reason:
                   type: string
                   maxLength: 200
+                intended_at:
+                  type: string
+                  format: date-time
       responses:
         '201':
           description: Pausa iniciada
@@ -481,6 +496,12 @@ paths:
       summary: Reanudar (cerrar la pausa abierta)
       description: Solo empleados. Cierra la pausa abierta de la jornada en curso.
       operationId: endPause
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FichajeIntent'
       responses:
         '200':
           description: Pausa reanudada
@@ -689,6 +710,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /me/schedule:
+    get:
+      tags: [schedules]
+      summary: Mi horario activo
+      description: El empleado consulta su propio horario vigente (para la barra de progreso).
+      operationId: getMySchedule
+      responses:
+        '200':
+          description: Horario activo (o null si no tiene)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: ['object', 'null']
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /employees/{id}/schedule:
     get:
@@ -1150,6 +1190,16 @@ components:
           type: string
           minLength: 3
           description: Motivo de la corrección (obligatorio por trazabilidad legal)
+
+    FichajeIntent:
+      type: object
+      description: |
+        Hora de la intención del fichaje (HU-06). El servidor solo la respeta si
+        cae en los últimos 2 minutos; en otro caso usa su propia hora.
+      properties:
+        intended_at:
+          type: string
+          format: date-time
 
     ManualEntry:
       type: object

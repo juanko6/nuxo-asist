@@ -132,6 +132,30 @@ export const schedulesRoutes: FastifyPluginAsync = async (app) => {
 
   // --- Asignación de horario por empleado (con vigencias) ---
 
+  const activeScheduleFor = async (employeeId: string) => {
+    const { rows: active } = await app.pg.query(
+      `SELECT es.*, t.name AS template_name
+       FROM employee_schedules es
+       JOIN schedule_templates t ON t.id = es.template_id
+       WHERE es.employee_id = $1
+       AND es.valid_from <= $2::date
+       AND (es.valid_to IS NULL OR es.valid_to >= $2::date)
+       LIMIT 1`,
+      [employeeId, todayIso()]
+    );
+    if (!active[0]) return null;
+    const { rows: days } = await app.pg.query<ScheduleTemplateDay>(
+      'SELECT * FROM schedule_template_days WHERE template_id = $1 ORDER BY weekday, start_time',
+      [active[0].template_id]
+    );
+    return { ...active[0], days, weekly_minutes: weeklyMinutes(days) };
+  };
+
+  // El empleado consulta su propio horario activo (para la barra de progreso)
+  app.get('/me/schedule', { preHandler: [app.authenticate] }, async (request) => {
+    return { active: await activeScheduleFor(request.currentUser.id) };
+  });
+
   app.get('/employees/:id/schedule', adminOnly, async (request) => {
     const { id } = IdParams.parse(request.params);
     const { rows: history } = await app.pg.query(
@@ -142,19 +166,7 @@ export const schedulesRoutes: FastifyPluginAsync = async (app) => {
        ORDER BY es.valid_from DESC`,
       [id]
     );
-    const active = history.find(
-      (h) =>
-        h.valid_from <= todayIso() && (h.valid_to === null || h.valid_to >= todayIso())
-    );
-    let activeView = null;
-    if (active) {
-      const { rows: days } = await app.pg.query<ScheduleTemplateDay>(
-        'SELECT * FROM schedule_template_days WHERE template_id = $1 ORDER BY weekday, start_time',
-        [active.template_id]
-      );
-      activeView = { ...active, days, weekly_minutes: weeklyMinutes(days) };
-    }
-    return { active: activeView, history };
+    return { active: await activeScheduleFor(id), history };
   });
 
   app.post('/employees/:id/schedule', adminOnly, async (request, reply) => {

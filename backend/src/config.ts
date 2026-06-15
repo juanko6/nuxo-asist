@@ -10,6 +10,12 @@ const EnvSchema = z.object({
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
   APP_TIMEZONE: z.string().default('UTC'),
   LOG_LEVEL: z.string().default('info'),
+  // HU-03: cierre automático de turnos olvidados
+  AUTO_CLOSE_ENABLED: z.string().default('true').transform((v) => v.toLowerCase() !== 'false'),
+  AUTO_CLOSE_CRON: z.string().default('*/5 * * * *'),
+  AUTO_CLOSE_WARN_MINUTES: z.coerce.number().int().min(0).default(15),
+  AUTO_CLOSE_GRACE_MINUTES: z.coerce.number().int().min(0).default(30),
+  MAX_SHIFT_HOURS: z.coerce.number().int().min(1).default(12),
 });
 
 export interface AppConfig {
@@ -23,6 +29,11 @@ export interface AppConfig {
   appTimezone: string;
   logLevel: string;
   logger: boolean;
+  autoCloseEnabled: boolean;
+  autoCloseCron: string;
+  autoCloseWarnMinutes: number;
+  autoCloseGraceMinutes: number;
+  maxShiftHours: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -45,5 +56,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     appTimezone: e.APP_TIMEZONE,
     logLevel: e.LOG_LEVEL,
     logger: true,
+    autoCloseEnabled: e.AUTO_CLOSE_ENABLED,
+    autoCloseCron: e.AUTO_CLOSE_CRON,
+    autoCloseWarnMinutes: e.AUTO_CLOSE_WARN_MINUTES,
+    autoCloseGraceMinutes: e.AUTO_CLOSE_GRACE_MINUTES,
+    maxShiftHours: e.MAX_SHIFT_HOURS,
   };
 }

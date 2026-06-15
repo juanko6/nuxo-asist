@@ -28,6 +28,10 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     absenceCheckEnabled: false,
     absenceCheckCron: '0 6 * * *',
     emailEnabled: false,
+    rateLimitEnabled: false,
+    rateLimitMax: 100,
+    rateLimitWindow: '1 minute',
+    authRateLimitMax: 10,
     ...overrides,
   };
 }

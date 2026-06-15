@@ -230,6 +230,13 @@ GitHub Actions en [`.github/workflows/`](.github/workflows):
   Usa caché de pnpm y de capas Docker (GHA) para acelerar; cancela ejecuciones obsoletas de la misma rama.
 - **`release.yml`** — al crear un tag `vX.Y.Z`, construye y publica las imágenes de producción en GHCR (`ghcr.io/sefogi/asist_employed-api` y `-web`). El despliegue automático en un servidor se añadirá cuando exista uno.
 
+## Seguridad
+
+- **Rate limiting** ([`@fastify/rate-limit`](https://github.com/fastify/fastify-rate-limit)): límite global por IP (`RATE_LIMIT_MAX`/`RATE_LIMIT_WINDOW`) y uno más estricto en `POST /auth/login` (`AUTH_RATE_LIMIT_MAX`) para frenar fuerza bruta. Devuelve `429` al superarlo. Se puede desactivar con `RATE_LIMIT_ENABLED=false`.
+- **Cabeceras de seguridad** ([`@fastify/helmet`](https://github.com/fastify/fastify-helmet)): `X-Content-Type-Options`, `X-Frame-Options`, etc. en todas las respuestas del API.
+- **Contraseñas** con bcrypt, **JWT** con expiración, **autorización por rol** en el backend, y protección anti-enumeración por *timing* en el login.
+- La auditoría de dependencias (`pnpm audit`) corre en CI de forma informativa.
+
 ## Roadmap
 
 El backlog funcional detallado está en [docs/historias-usuario.md](docs/historias-usuario.md)

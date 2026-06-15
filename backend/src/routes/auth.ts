@@ -16,7 +16,20 @@ const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', 10);
 type UserWithHash = SafeUser & { password_hash: string };
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
-  app.post('/auth/login', async (request) => {
+  // Límite estricto en login para frenar fuerza bruta (si el rate limit global
+  // está registrado; en otro caso esta config es metadata inerte).
+  const loginConfig = app.config.rateLimitEnabled
+    ? {
+        config: {
+          rateLimit: {
+            max: app.config.authRateLimitMax,
+            timeWindow: app.config.rateLimitWindow,
+          },
+        },
+      }
+    : {};
+
+  app.post('/auth/login', loginConfig, async (request) => {
     const { email, password } = LoginSchema.parse(request.body);
 
     const { rows } = await app.pg.query<UserWithHash>(

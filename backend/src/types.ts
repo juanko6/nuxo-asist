@@ -14,6 +14,9 @@ export interface SafeUser {
   created_at: Date;
 }
 
+export type AttendanceSource = 'realtime' | 'manual' | 'system';
+export type AttendanceStatus = 'confirmed' | 'pending_validation' | 'rejected';
+
 export interface AttendanceRecord {
   id: string;
   employee_id: string;
@@ -22,6 +25,8 @@ export interface AttendanceRecord {
   check_out: Date | null;
   overtime_requested: boolean;
   overtime_approved: boolean;
+  source: AttendanceSource;
+  status: AttendanceStatus;
   created_at: Date;
 }
 
@@ -39,7 +44,7 @@ export interface AttendanceAuditEntry {
   attendance_id: string | null;
   actor_id: string | null;
   actor_name: string;
-  action: 'correction' | 'manual_create' | 'system_close';
+  action: 'correction' | 'manual_create' | 'system_close' | 'manual_validate';
   reason: string;
   changes: Record<string, { old: unknown; new: unknown }>;
   created_at: Date;

@@ -34,6 +34,22 @@ const ExportQuerySchema = z.object({
   to: DateOnly.optional(),
 });
 
+const ManualEntrySchema = z
+  .object({
+    check_in: z.string().datetime({ offset: true }),
+    check_out: z.string().datetime({ offset: true }).optional(),
+    reason: z.string().max(300).optional(),
+  })
+  .refine(
+    (d) => d.check_out === undefined || new Date(d.check_out) >= new Date(d.check_in),
+    { message: 'La salida no puede ser anterior a la entrada' }
+  );
+
+const ValidateSchema = z.object({
+  decision: z.enum(['approve', 'reject']),
+  reason: z.string().max(300).optional(),
+});
+
 const IdParams = z.object({ id: z.string().uuid() });
 
 const isUniqueViolation = (err: unknown): boolean =>
@@ -369,6 +385,111 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
       const { rows: updated } = await client.query<AttendanceRecord>(
         `UPDATE attendance SET check_in = $2, check_out = $3 WHERE id = $1 RETURNING *`,
         [id, newCheckIn.toISOString(), newCheckOut ? newCheckOut.toISOString() : null]
+      );
+      await client.query('COMMIT');
+      return updated[0];
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  });
+
+  // --- HU-02: registro olvidado (entrada manual) ---
+
+  app.post('/attendance/manual', employeeOnly, async (request, reply) => {
+    const body = ManualEntrySchema.parse(request.body);
+    const { id: employeeId, name } = request.currentUser;
+    const checkIn = new Date(body.check_in);
+    const checkOut = body.check_out ? new Date(body.check_out) : null;
+    const now = Date.now();
+
+    if (checkIn.getTime() > now) {
+      throw conflict('La hora de entrada no puede estar en el futuro');
+    }
+    if (checkOut && checkOut.getTime() > now) {
+      throw conflict('La hora de salida no puede estar en el futuro');
+    }
+
+    const { rows: overlap } = await app.pg.query(
+      `SELECT 1 FROM attendance
+       WHERE employee_id = $1 AND status <> 'rejected'
+       AND ($3::timestamptz IS NULL OR check_in < $3::timestamptz)
+       AND (check_out IS NULL OR $2::timestamptz < check_out)`,
+      [employeeId, checkIn.toISOString(), checkOut ? checkOut.toISOString() : null]
+    );
+    if (overlap.length > 0) {
+      throw conflict('El registro se solapa con otro fichaje existente');
+    }
+
+    const client = await app.pg.connect();
+    try {
+      await client.query('BEGIN');
+      const { rows } = await client.query<AttendanceRecord>(
+        `INSERT INTO attendance (employee_id, employee_name, check_in, check_out, source, status)
+         VALUES ($1, $2, $3, $4, 'manual', 'pending_validation')
+         RETURNING *`,
+        [employeeId, name, checkIn.toISOString(), checkOut ? checkOut.toISOString() : null]
+      );
+      const record = rows[0]!;
+      await recordAudit(client, {
+        attendanceId: record.id,
+        actorId: employeeId,
+        actorName: name,
+        action: 'manual_create',
+        reason: body.reason ?? 'Registro manual (fichaje olvidado)',
+        changes: {
+          check_in: { old: null, new: checkIn.toISOString() },
+          check_out: { old: null, new: checkOut ? checkOut.toISOString() : null },
+        },
+      });
+      await client.query('COMMIT');
+      return reply.code(201).send(record);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      if (isUniqueViolation(err)) {
+        throw conflict('Ya tienes un fichaje abierto pendiente de cerrar');
+      }
+      throw err;
+    } finally {
+      client.release();
+    }
+  });
+
+  app.post('/attendance/:id/validate', {
+    preHandler: [app.authenticate, app.requireAdmin],
+  }, async (request) => {
+    const { id } = IdParams.parse(request.params);
+    const body = ValidateSchema.parse(request.body);
+
+    const { rows } = await app.pg.query<AttendanceRecord>(
+      'SELECT * FROM attendance WHERE id = $1',
+      [id]
+    );
+    const record = rows[0];
+    if (!record) throw notFound('Registro de asistencia no encontrado');
+    if (record.status !== 'pending_validation') {
+      throw conflict('El registro no está pendiente de validación');
+    }
+
+    const newStatus = body.decision === 'approve' ? 'confirmed' : 'rejected';
+    const client = await app.pg.connect();
+    try {
+      await client.query('BEGIN');
+      await recordAudit(client, {
+        attendanceId: id,
+        actorId: request.currentUser.id,
+        actorName: request.currentUser.name,
+        action: 'manual_validate',
+        reason:
+          body.reason ??
+          `Entrada manual ${body.decision === 'approve' ? 'aprobada' : 'rechazada'}`,
+        changes: { status: { old: record.status, new: newStatus } },
+      });
+      const { rows: updated } = await client.query<AttendanceRecord>(
+        'UPDATE attendance SET status = $2 WHERE id = $1 RETURNING *',
+        [id, newStatus]
       );
       await client.query('COMMIT');
       return updated[0];

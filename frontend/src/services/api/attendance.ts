@@ -4,6 +4,8 @@ import type {
   AttendanceDetail,
   AttendancePause,
   AttendanceCorrection,
+  ManualEntryDTO,
+  ValidateAttendanceDTO,
 } from '@/types';
 
 export interface AttendanceFilters {
@@ -33,6 +35,13 @@ export const attendanceService = {
 
   checkOut: (): Promise<AttendanceRecord> =>
     api.post<AttendanceRecord>('/attendance/check-out'),
+
+  // HU-02: registro olvidado (entrada manual) y validación
+  createManualEntry: (data: ManualEntryDTO): Promise<AttendanceRecord> =>
+    api.post<AttendanceRecord>('/attendance/manual', data),
+
+  validate: (id: string, data: ValidateAttendanceDTO): Promise<AttendanceRecord> =>
+    api.post<AttendanceRecord>(`/attendance/${id}/validate`, data),
 
   // HU-04: pausas intrajornada
   startPause: (reason?: string): Promise<AttendancePause> =>

@@ -363,6 +363,80 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /attendance/manual:
+    post:
+      tags: [attendance]
+      summary: Registro olvidado (entrada manual)
+      description: |
+        Solo empleados. Crea un fichaje con hora indicada por el empleado, marcado
+        como `source=manual` y `status=pending_validation` (queda pendiente de que
+        el responsable lo valide). La hora no puede estar en el futuro ni solaparse
+        con otro fichaje. Deja huella en la auditoría.
+      operationId: createManualEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManualEntry'
+      responses:
+        '201':
+          description: Entrada manual creada (pendiente de validación)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceRecord'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Hora futura o solapamiento con otro fichaje
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /attendance/{id}/validate:
+    post:
+      tags: [attendance]
+      summary: Validar una entrada manual (aprobar/rechazar)
+      description: |
+        Solo admin. Aprueba (`status=confirmed`) o rechaza (`status=rejected`) un
+        registro pendiente de validación. Deja huella en la auditoría.
+      operationId: validateAttendance
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateAttendance'
+      responses:
+        '200':
+          description: Registro validado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttendanceRecord'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: El registro no está pendiente de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /attendance/pause/start:
     post:
       tags: [attendance]
@@ -884,7 +958,7 @@ components:
 
     AttendanceRecord:
       type: object
-      required: [id, employee_id, employee_name, check_in, check_out, overtime_requested, overtime_approved, created_at]
+      required: [id, employee_id, employee_name, check_in, check_out, overtime_requested, overtime_approved, source, status, created_at]
       properties:
         id:
           type: string
@@ -904,6 +978,14 @@ components:
           type: boolean
         overtime_approved:
           type: boolean
+        source:
+          type: string
+          enum: [realtime, manual, system]
+          description: Origen del fichaje (tiempo real, manual u cierre por sistema)
+        status:
+          type: string
+          enum: [confirmed, pending_validation, rejected]
+          description: Estado de validación (las entradas manuales nacen pendientes)
         created_at:
           type: string
           format: date-time
@@ -997,6 +1079,31 @@ components:
           type: string
           minLength: 3
           description: Motivo de la corrección (obligatorio por trazabilidad legal)
+
+    ManualEntry:
+      type: object
+      required: [check_in]
+      properties:
+        check_in:
+          type: string
+          format: date-time
+        check_out:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          maxLength: 300
+
+    ValidateAttendance:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
+        reason:
+          type: string
+          maxLength: 300
 
     ScheduleTemplateDay:
       type: object

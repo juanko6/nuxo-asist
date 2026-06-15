@@ -31,6 +31,9 @@ export interface LoginCredentials {
 }
 
 // Attendance Types
+export type AttendanceSource = 'realtime' | 'manual' | 'system';
+export type AttendanceStatus = 'confirmed' | 'pending_validation' | 'rejected';
+
 export interface AttendanceRecord {
   id: string;
   employee_id: string;
@@ -39,7 +42,21 @@ export interface AttendanceRecord {
   check_out: string | null;
   overtime_requested: boolean;
   overtime_approved: boolean;
+  source: AttendanceSource;
+  status: AttendanceStatus;
   created_at?: string;
+}
+
+// HU-02: registro olvidado (entrada manual)
+export interface ManualEntryDTO {
+  check_in: string;
+  check_out?: string;
+  reason?: string;
+}
+
+export interface ValidateAttendanceDTO {
+  decision: 'approve' | 'reject';
+  reason?: string;
 }
 
 // HU-04: pausas intrajornada

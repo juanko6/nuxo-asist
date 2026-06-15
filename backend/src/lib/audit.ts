@@ -1,6 +1,10 @@
 import type { Pool, PoolClient } from 'pg';
 
-export type AuditAction = 'correction' | 'manual_create' | 'system_close';
+export type AuditAction =
+  | 'correction'
+  | 'manual_create'
+  | 'system_close'
+  | 'manual_validate';
 
 export interface AuditInput {
   attendanceId: string;

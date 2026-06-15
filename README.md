@@ -133,6 +133,8 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 | POST | `/api/v1/attendance/check-out` | empleado | Fichar salida |
 | POST | `/api/v1/attendance/:id/overtime/request` | empleado dueño | Solicitar horas extra (notifica al admin) |
 | POST | `/api/v1/attendance/:id/overtime/approve` | admin | Aprobar horas extra |
+| POST | `/api/v1/attendance/manual` | empleado | Registro olvidado (entrada manual, queda pendiente de validar) |
+| POST | `/api/v1/attendance/:id/validate` | admin | Aprobar / rechazar una entrada manual |
 | GET/POST | `/api/v1/attendance/pause/start` · `/pause/end` | empleado | Pausar / reanudar la jornada |
 | GET/PATCH | `/api/v1/attendance/:id` | dueño/admin | Detalle con pausas y auditoría / corregir (admin) |
 | GET | `/api/v1/attendance/export.csv` | admin | Exportar asistencia en CSV (inspección) |
@@ -161,6 +163,12 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 
 - **Plantillas de horario**: bloques de trabajo por día (ISO 1=lunes…7=domingo); un `end_time` ≤ `start_time` es un turno nocturno. La carga horaria semanal esperada se calcula automáticamente.
 - **Asignación con vigencias**: al asignar un horario desde una fecha, la asignación anterior se cierra el día previo (`valid_to`), de modo que los informes pasados no se alteran. Un horario "personalizado" de un empleado se modela como una plantilla dedicada.
+
+### Registro olvidado (HU-02)
+
+- Cada fichaje lleva un `source` (`realtime`, `manual`, `system`) y un `status` (`confirmed`, `pending_validation`, `rejected`).
+- El empleado puede crear una **entrada manual** (`POST /attendance/manual`) si olvidó fichar: nace como `manual` + `pending_validation`, no puede tener hora futura ni solaparse con otro fichaje, y deja huella en la auditoría.
+- El responsable la **valida** (`POST /attendance/:id/validate`, aprobar/rechazar), lo que también queda auditado.
 
 ## Migraciones de base de datos
 

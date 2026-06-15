@@ -184,7 +184,7 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 
 - **Módulo de ausencias**: el admin/RRHH registra vacaciones, bajas y permisos (`/absences`); cada empleado consulta las suyas.
 - Un **cron diario** (`ABSENCE_CHECK_CRON`) detecta empleados que, según su horario activo, tenían día laborable pero no ficharon **ni** tienen una ausencia registrada, y genera un aviso in-app (`notifications` tipo `absence`). Es idempotente (un aviso por empleado y día).
-- El **envío por email** queda preparado como punto de extensión (`EMAIL_ENABLED`, hoy desactivado): el aviso efectivo es la notificación in-app. El SMTP real se integrará en la Fase 7.
+- El **envío por email** (`EMAIL_ENABLED` + `SMTP_*`, nodemailer) manda el aviso con un botón "Justificar ausencia"; si está desactivado o falla, el aviso efectivo sigue siendo la notificación in-app. En desarrollo, `docker-compose.dev.yml` levanta **Mailpit** (bandeja de prueba en http://localhost:8025).
 
 ## Migraciones de base de datos
 

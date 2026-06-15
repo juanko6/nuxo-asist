@@ -32,6 +32,12 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     rateLimitMax: 100,
     rateLimitWindow: '1 minute',
     authRateLimitMax: 10,
+    smtpHost: '',
+    smtpPort: 587,
+    smtpSecure: false,
+    smtpUser: '',
+    smtpPass: '',
+    smtpFrom: 'Test <test@asist.local>',
     ...overrides,
   };
 }

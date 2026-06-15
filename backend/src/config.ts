@@ -19,8 +19,15 @@ const EnvSchema = z.object({
   // HU-01: detección de ausencias injustificadas
   ABSENCE_CHECK_ENABLED: z.string().default('true').transform((v) => v.toLowerCase() !== 'false'),
   ABSENCE_CHECK_CRON: z.string().default('0 6 * * *'),
-  // Envío de email (de momento deshabilitado; el aviso efectivo es in-app)
+  // Envío de email. Si EMAIL_ENABLED=true y hay SMTP_HOST, se envía por SMTP;
+  // en otro caso el aviso efectivo es la notificación in-app.
   EMAIL_ENABLED: z.string().default('false').transform((v) => v.toLowerCase() === 'true'),
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z.string().default('false').transform((v) => v.toLowerCase() === 'true'),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  SMTP_FROM: z.string().default('Control de Asistencia <no-reply@asist.local>'),
   // Rate limiting (HU hardening)
   RATE_LIMIT_ENABLED: z.string().default('true').transform((v) => v.toLowerCase() !== 'false'),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
@@ -51,6 +58,12 @@ export interface AppConfig {
   rateLimitMax: number;
   rateLimitWindow: string;
   authRateLimitMax: number;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser: string;
+  smtpPass: string;
+  smtpFrom: string;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -85,5 +98,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     rateLimitMax: e.RATE_LIMIT_MAX,
     rateLimitWindow: e.RATE_LIMIT_WINDOW,
     authRateLimitMax: e.AUTH_RATE_LIMIT_MAX,
+    smtpHost: e.SMTP_HOST,
+    smtpPort: e.SMTP_PORT,
+    smtpSecure: e.SMTP_SECURE,
+    smtpUser: e.SMTP_USER,
+    smtpPass: e.SMTP_PASS,
+    smtpFrom: e.SMTP_FROM,
   };
 }

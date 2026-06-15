@@ -20,5 +20,15 @@ services:
       timeout: 3s
       retries: 10
 
+  # Bandeja de correo de prueba para el envío de emails (HU-01) en desarrollo.
+  # SMTP en :1025, interfaz web en http://localhost:8025.
+  # Arranca el API con EMAIL_ENABLED=true SMTP_HOST=localhost SMTP_PORT=1025.
+  mail:
+    image: axllent/mailpit:latest
+    container_name: asist_mail_dev
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
 volumes:
   asist_db_dev:

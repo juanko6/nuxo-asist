@@ -141,6 +141,8 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 | GET/POST | `/api/v1/schedule-templates` | admin | Listar / crear plantillas de horario |
 | GET/DELETE | `/api/v1/schedule-templates/:id` | admin | Detalle / eliminar plantilla |
 | GET/POST | `/api/v1/employees/:id/schedule` | admin | Horario del empleado / asignar con vigencia |
+| GET/POST | `/api/v1/absences` | admin (GET propio el empleado) | Listar / registrar ausencias |
+| DELETE | `/api/v1/absences/:id` | admin | Eliminar ausencia |
 | GET | `/api/v1/notifications` | admin | Notificaciones |
 | DELETE | `/api/v1/notifications/:id` | admin | Eliminar notificación |
 | GET | `/api/v1/login-logs` | admin | Registro de logins |
@@ -177,6 +179,12 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
   - Pasada la hora teórica + `AUTO_CLOSE_GRACE_MINUTES`, **cierra el turno** a la hora teórica de fin y lo registra como `system_close` en la auditoría.
 - La hora teórica sale del **horario activo** del empleado (HU-05); si no tiene horario, se usa `MAX_SHIFT_HOURS` como red de seguridad. Soporta turnos nocturnos (la hora de fin cae al día siguiente).
 - El cierre ocurre en el backend, **independientemente de si la app del empleado está abierta**. Se puede desactivar con `AUTO_CLOSE_ENABLED=false`.
+
+### Ausencias injustificadas (HU-01)
+
+- **Módulo de ausencias**: el admin/RRHH registra vacaciones, bajas y permisos (`/absences`); cada empleado consulta las suyas.
+- Un **cron diario** (`ABSENCE_CHECK_CRON`) detecta empleados que, según su horario activo, tenían día laborable pero no ficharon **ni** tienen una ausencia registrada, y genera un aviso in-app (`notifications` tipo `absence`). Es idempotente (un aviso por empleado y día).
+- El **envío por email** queda preparado como punto de extensión (`EMAIL_ENABLED`, hoy desactivado): el aviso efectivo es la notificación in-app. El SMTP real se integrará en la Fase 7.
 
 ## Migraciones de base de datos
 
@@ -231,7 +239,7 @@ El backlog funcional detallado está en [docs/historias-usuario.md](docs/histori
 - [x] **Fase 2** ([#1](https://github.com/sefogi/asist_employed/issues/1)) — Dockerización completa (frontend + API + BD + nginx) para un solo servidor
 - [x] **Fase 3** ([#2](https://github.com/sefogi/asist_employed/issues/2)) — CI/CD con GitHub Actions (lint + tests + build de imágenes); deploy a servidor pendiente de infraestructura
 - [x] **Fase 4** ([#3](https://github.com/sefogi/asist_employed/issues/3)) — Núcleo legal del registro horario: pausas + auditoría inalterable + export (HU-04), horarios y cargas horarias (HU-05)
-- [ ] **Fase 5** ([#4](https://github.com/sefogi/asist_employed/issues/4)) — Incidencias y automatización: registro olvidado (HU-02), cierre automático de turno (HU-03), ausencias injustificadas + módulo de vacaciones/bajas + email (HU-01)
+- [x] **Fase 5** ([#4](https://github.com/sefogi/asist_employed/issues/4)) — Incidencias y automatización: registro olvidado (HU-02), cierre automático de turno (HU-03), ausencias injustificadas + módulo de vacaciones/bajas (HU-01; email preparado para Fase 7)
 - [ ] **Fase 6** ([#5](https://github.com/sefogi/asist_employed/issues/5)) — Rediseño UX/UI (mobile-first, routing, sistema de diseño) + confirmación de acciones (HU-06)
 - [ ] **Fase 7** ([#6](https://github.com/sefogi/asist_employed/issues/6)) — Hardening: HTTPS, backups automáticos (retención 4 años), rate-limiting
 - [ ] **Fase 8** ([#7](https://github.com/sefogi/asist_employed/issues/7)) — Avanzadas: geolocalización RGPD (HU-07), modo kiosco PIN/QR (HU-08)

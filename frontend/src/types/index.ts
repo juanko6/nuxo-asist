@@ -146,6 +146,28 @@ export interface AssignScheduleDTO {
   valid_from: string;
 }
 
+// HU-01: ausencias
+export type AbsenceType = 'vacation' | 'sick_leave' | 'leave' | 'other';
+
+export interface Absence {
+  id: string;
+  employee_id: string;
+  type: AbsenceType;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface CreateAbsenceDTO {
+  employee_id: string;
+  type: AbsenceType;
+  start_date: string;
+  end_date: string;
+  reason?: string;
+}
+
 // Notification Types
 export interface Notification {
   id: string;
@@ -153,7 +175,7 @@ export interface Notification {
   employee_name: string;
   attendance_id: string | null;
   message: string;
-  type: 'overtime_request' | 'approval' | 'info';
+  type: 'overtime_request' | 'approval' | 'info' | 'absence';
   read: boolean;
   timestamp: string;
 }

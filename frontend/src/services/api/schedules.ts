@@ -4,6 +4,7 @@ import type {
   ScheduleTemplateDetail,
   CreateScheduleTemplateDTO,
   EmployeeScheduleView,
+  EmployeeScheduleActive,
   EmployeeSchedule,
   AssignScheduleDTO,
 } from '@/types';
@@ -11,6 +12,9 @@ import type {
 export const schedulesService = {
   getTemplates: (): Promise<ScheduleTemplateSummary[]> =>
     api.get<ScheduleTemplateSummary[]>('/schedule-templates'),
+
+  getMySchedule: (): Promise<{ active: EmployeeScheduleActive | null }> =>
+    api.get<{ active: EmployeeScheduleActive | null }>('/me/schedule'),
 
   getTemplate: (id: string): Promise<ScheduleTemplateDetail> =>
     api.get<ScheduleTemplateDetail>(`/schedule-templates/${id}`),

@@ -30,11 +30,12 @@ export const attendanceService = {
   getById: (id: string): Promise<AttendanceDetail> =>
     api.get<AttendanceDetail>(`/attendance/${id}`),
 
-  checkIn: (): Promise<AttendanceRecord> =>
-    api.post<AttendanceRecord>('/attendance/check-in'),
+  // intendedAt (HU-06): hora del primer clic; el server la respeta si es < 2 min
+  checkIn: (intendedAt?: string): Promise<AttendanceRecord> =>
+    api.post<AttendanceRecord>('/attendance/check-in', intendedAt ? { intended_at: intendedAt } : undefined),
 
-  checkOut: (): Promise<AttendanceRecord> =>
-    api.post<AttendanceRecord>('/attendance/check-out'),
+  checkOut: (intendedAt?: string): Promise<AttendanceRecord> =>
+    api.post<AttendanceRecord>('/attendance/check-out', intendedAt ? { intended_at: intendedAt } : undefined),
 
   // HU-02: registro olvidado (entrada manual) y validación
   createManualEntry: (data: ManualEntryDTO): Promise<AttendanceRecord> =>
@@ -44,11 +45,14 @@ export const attendanceService = {
     api.post<AttendanceRecord>(`/attendance/${id}/validate`, data),
 
   // HU-04: pausas intrajornada
-  startPause: (reason?: string): Promise<AttendancePause> =>
-    api.post<AttendancePause>('/attendance/pause/start', reason ? { reason } : undefined),
+  startPause: (reason?: string, intendedAt?: string): Promise<AttendancePause> =>
+    api.post<AttendancePause>('/attendance/pause/start', {
+      ...(reason ? { reason } : {}),
+      ...(intendedAt ? { intended_at: intendedAt } : {}),
+    }),
 
-  endPause: (): Promise<AttendancePause> =>
-    api.post<AttendancePause>('/attendance/pause/end'),
+  endPause: (intendedAt?: string): Promise<AttendancePause> =>
+    api.post<AttendancePause>('/attendance/pause/end', intendedAt ? { intended_at: intendedAt } : undefined),
 
   // HU-04: corrección con traza (solo admin)
   correct: (id: string, data: AttendanceCorrection): Promise<AttendanceRecord> =>

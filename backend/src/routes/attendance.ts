@@ -16,7 +16,28 @@ const ListQuerySchema = z.object({
   employee_id: z.string().uuid().optional(),
 });
 
-const PauseStartSchema = z.object({ reason: z.string().max(200).optional() });
+const PauseStartSchema = z.object({
+  reason: z.string().max(200).optional(),
+  intended_at: z.string().datetime({ offset: true }).optional(),
+});
+
+const IntentSchema = z.object({
+  intended_at: z.string().datetime({ offset: true }).optional(),
+});
+
+// HU-06: el cliente puede mandar la hora de la "intención" (el primer clic). Se
+// acepta solo si cae en los últimos 2 minutos, para no penalizar la confirmación
+// lenta ni permitir retrodatar abusando; en otro caso se usa la hora del servidor.
+const MAX_INTENT_BACKDATE_MS = 2 * 60 * 1000;
+const effectiveTime = (intendedAt: string | undefined): string => {
+  const now = Date.now();
+  if (!intendedAt) return new Date(now).toISOString();
+  const t = new Date(intendedAt).getTime();
+  if (Number.isFinite(t) && t <= now && t >= now - MAX_INTENT_BACKDATE_MS) {
+    return new Date(t).toISOString();
+  }
+  return new Date(now).toISOString();
+};
 
 const CorrectionSchema = z
   .object({
@@ -123,6 +144,7 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
 
   app.post('/attendance/check-in', employeeOnly, async (request, reply) => {
     const { id: employeeId, name } = request.currentUser;
+    const { intended_at } = IntentSchema.parse(request.body ?? {});
 
     const { rows: existing } = await app.pg.query(
       `SELECT id FROM attendance
@@ -136,10 +158,10 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const { rows } = await app.pg.query<AttendanceRecord>(
-        `INSERT INTO attendance (employee_id, employee_name)
-         VALUES ($1, $2)
+        `INSERT INTO attendance (employee_id, employee_name, check_in)
+         VALUES ($1, $2, $3)
          RETURNING *`,
-        [employeeId, name]
+        [employeeId, name, effectiveTime(intended_at)]
       );
       return reply.code(201).send(rows[0]);
     } catch (err) {
@@ -151,6 +173,7 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post('/attendance/check-out', employeeOnly, async (request) => {
+    const { intended_at } = IntentSchema.parse(request.body ?? {});
     const { rows: openPause } = await app.pg.query(
       `SELECT 1 FROM attendance_pauses p
        JOIN attendance a ON a.id = p.attendance_id
@@ -162,12 +185,12 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const { rows } = await app.pg.query<AttendanceRecord>(
-      `UPDATE attendance SET check_out = now()
+      `UPDATE attendance SET check_out = GREATEST($3::timestamptz, check_in)
        WHERE employee_id = $1
        AND check_out IS NULL
        AND (check_in AT TIME ZONE $2)::date = (now() AT TIME ZONE $2)::date
        RETURNING *`,
-      [request.currentUser.id, tz()]
+      [request.currentUser.id, tz(), effectiveTime(intended_at)]
     );
     if (!rows[0]) {
       throw conflict('No hay un fichaje de entrada abierto hoy');
@@ -178,7 +201,7 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
   // --- HU-04: pausas intrajornada ---
 
   app.post('/attendance/pause/start', employeeOnly, async (request, reply) => {
-    const { reason } = PauseStartSchema.parse(request.body ?? {});
+    const { reason, intended_at } = PauseStartSchema.parse(request.body ?? {});
 
     const { rows: open } = await app.pg.query<{ id: string }>(
       `SELECT id FROM attendance
@@ -193,9 +216,9 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const { rows } = await app.pg.query<AttendancePause>(
-        `INSERT INTO attendance_pauses (attendance_id, reason)
-         VALUES ($1, $2) RETURNING *`,
-        [attendance.id, reason ?? null]
+        `INSERT INTO attendance_pauses (attendance_id, pause_start, reason)
+         VALUES ($1, $2, $3) RETURNING *`,
+        [attendance.id, effectiveTime(intended_at), reason ?? null]
       );
       return reply.code(201).send(rows[0]);
     } catch (err) {
@@ -207,14 +230,15 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post('/attendance/pause/end', employeeOnly, async (request) => {
+    const { intended_at } = IntentSchema.parse(request.body ?? {});
     const { rows } = await app.pg.query<AttendancePause>(
-      `UPDATE attendance_pauses SET pause_end = now()
+      `UPDATE attendance_pauses SET pause_end = GREATEST($2::timestamptz, pause_start)
        WHERE pause_end IS NULL
        AND attendance_id IN (
          SELECT id FROM attendance WHERE employee_id = $1 AND check_out IS NULL
        )
        RETURNING *`,
-      [request.currentUser.id]
+      [request.currentUser.id, effectiveTime(intended_at)]
     );
     if (!rows[0]) {
       throw conflict('No tienes una pausa abierta');

@@ -237,6 +237,23 @@ GitHub Actions en [`.github/workflows/`](.github/workflows):
 - **Contraseñas** con bcrypt, **JWT** con expiración, **autorización por rol** en el backend, y protección anti-enumeración por *timing* en el login.
 - La auditoría de dependencias (`pnpm audit`) corre en CI de forma informativa.
 
+### Backups (retención legal 4 años)
+
+El servicio `backup` del compose de producción hace `pg_dump` según `BACKUP_SCHEDULE` y conserva diarios/semanales/mensuales (los mensuales cubren 48 meses, la retención de 4 años que exige la ley). Los dumps viven en el volumen `asist_backups`.
+
+```bash
+docker compose cp backup:/backups/daily/<fichero>.sql.gz ./   # sacar un dump al host
+./scripts/restore.sh <fichero>.sql.gz                          # restaurar (probado y documentado)
+```
+
+### HTTPS
+
+Para servir por HTTPS con certificados automáticos (Let's Encrypt) se incluye una capa opcional con [Caddy](https://caddyserver.com). Requiere un dominio público (`PUBLIC_DOMAIN`) apuntando al servidor y los puertos 80/443 abiertos:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d
+```
+
 ## Roadmap
 
 El backlog funcional detallado está en [docs/historias-usuario.md](docs/historias-usuario.md)
@@ -248,7 +265,7 @@ El backlog funcional detallado está en [docs/historias-usuario.md](docs/histori
 - [x] **Fase 4** ([#3](https://github.com/sefogi/asist_employed/issues/3)) — Núcleo legal del registro horario: pausas + auditoría inalterable + export (HU-04), horarios y cargas horarias (HU-05)
 - [x] **Fase 5** ([#4](https://github.com/sefogi/asist_employed/issues/4)) — Incidencias y automatización: registro olvidado (HU-02), cierre automático de turno (HU-03), ausencias injustificadas + módulo de vacaciones/bajas (HU-01; email preparado para Fase 7)
 - [x] **Fase 6** ([#5](https://github.com/sefogi/asist_employed/issues/5)) — Rediseño UX/UI (mobile-first, routing, sistema de diseño) + confirmación de acciones con hora de intención (HU-06)
-- [ ] **Fase 7** ([#6](https://github.com/sefogi/asist_employed/issues/6)) — Hardening: HTTPS, backups automáticos (retención 4 años), rate-limiting
+- [x] **Fase 7** ([#6](https://github.com/sefogi/asist_employed/issues/6)) — Hardening: rate-limiting + helmet, email real (SMTP), backups con retención 4 años, HTTPS con Caddy
 - [ ] **Fase 8** ([#7](https://github.com/sefogi/asist_employed/issues/7)) — Avanzadas: geolocalización RGPD (HU-07), modo kiosco PIN/QR (HU-08)
 
 ## Licencia

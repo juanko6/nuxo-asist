@@ -1,0 +1,7 @@
+# Caddy con HTTPS automático (Let's Encrypt). Requiere un dominio público
+# apuntando al servidor y los puertos 80/443 abiertos.
+# PUBLIC_DOMAIN se inyecta desde el .env (docker-compose.tls.yml).
+{$PUBLIC_DOMAIN} {
+	encode gzip
+	reverse_proxy web:80
+}

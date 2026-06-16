@@ -9,6 +9,14 @@ export interface AbsenceEmail {
   justifyUrl?: string;
 }
 
+export interface SupportEmail {
+  subject: string;
+  message: string;
+  fromName: string;
+  fromEmail: string;
+  companyName: string | null;
+}
+
 let cached: Transporter | null = null;
 
 /** Transporte SMTP a partir de la config; null si el email está deshabilitado. */
@@ -57,6 +65,37 @@ export async function sendAbsenceEmail(
       `<p><a href="${justify}" ` +
       `style="display:inline-block;padding:10px 18px;background:#4f46e5;color:#fff;` +
       `border-radius:8px;text-decoration:none">Justificar ausencia</a></p>`,
+  });
+  return true;
+}
+
+/**
+ * Envía un ticket de soporte al equipo de nuxoasist (config.supportEmail).
+ * Best-effort: devuelve false si no hay transporte (el ticket ya se guardó en BD).
+ */
+export async function sendSupportEmail(
+  config: AppConfig,
+  payload: SupportEmail,
+  transport?: Transporter | null
+): Promise<boolean> {
+  const t = transport !== undefined ? transport : getTransport(config);
+  if (!t) return false;
+
+  const company = payload.companyName ?? '(sin nombre de empresa)';
+  await t.sendMail({
+    from: config.smtpFrom,
+    to: config.supportEmail,
+    replyTo: payload.fromEmail,
+    subject: `[Soporte nuxoasist] ${payload.subject}`,
+    text:
+      `Nuevo ticket de soporte\n\n` +
+      `Empresa: ${company}\n` +
+      `De: ${payload.fromName} <${payload.fromEmail}>\n\n` +
+      `${payload.message}\n`,
+    html:
+      `<p><strong>Nuevo ticket de soporte</strong></p>` +
+      `<p>Empresa: ${company}<br/>De: ${payload.fromName} &lt;${payload.fromEmail}&gt;</p>` +
+      `<p style="white-space:pre-wrap">${payload.message}</p>`,
   });
   return true;
 }

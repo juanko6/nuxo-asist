@@ -69,6 +69,8 @@ export const LoginPage: React.FC = () => {
             </Button>
           </form>
         </Card>
+
+        <p className="text-center text-xs text-slate-300 mt-6">nuxoasist</p>
       </div>
     </div>
   );

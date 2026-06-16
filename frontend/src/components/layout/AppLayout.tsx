@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuthContext } from '@/context/auth';
 import { useSettings } from '@/context/settings';
+import { SupportButton } from '@/components/SupportButton';
 import { cn } from '@/components/ui';
 
 interface NavItem {
@@ -51,6 +52,7 @@ export const AppLayout: React.FC = () => {
                 <p className="text-sm font-medium text-slate-800">{user?.name}</p>
                 <p className="text-xs text-slate-400">{isAdmin ? 'Administrador' : 'Empleado'}</p>
               </div>
+              {isAdmin && <SupportButton />}
               <button
                 onClick={logout}
                 className="grid place-items-center w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100"
@@ -84,9 +86,13 @@ export const AppLayout: React.FC = () => {
         </div>
       </header>
 
-      <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-5 pb-20">
+      <main className="flex-1 mx-auto w-full max-w-3xl px-4 py-5 pb-12">
         <Outlet />
       </main>
+
+      <footer className="mx-auto w-full max-w-3xl px-4 pb-6 text-center">
+        <span className="text-xs text-slate-300">nuxoasist</span>
+      </footer>
     </div>
   );
 };

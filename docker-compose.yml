@@ -48,7 +48,8 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-Control de Asistencia <no-reply@asist.local>}
+      SMTP_FROM: ${SMTP_FROM:-nuxoasist <no-reply@nuxoasist.app>}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-nuxoasist@gmail.com}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
       RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-1 minute}

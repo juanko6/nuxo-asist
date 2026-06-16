@@ -1013,6 +1013,39 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /support:
+    post:
+      tags: [system]
+      summary: Abrir un ticket de soporte
+      description: Solo admin. Guarda el ticket y envía un correo al equipo de nuxoasist (best-effort).
+      operationId: createSupportTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, message]
+              properties:
+                subject: { type: string, minLength: 3, maxLength: 150 }
+                message: { type: string, minLength: 10, maxLength: 4000 }
+      responses:
+        '201':
+          description: Ticket creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket: { type: object }
+                  email_sent: { type: boolean }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /absences:
     get:
       tags: [absences]

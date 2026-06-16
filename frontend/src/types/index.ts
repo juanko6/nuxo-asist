@@ -146,6 +146,23 @@ export interface AssignScheduleDTO {
   valid_from: string;
 }
 
+// Onboarding / ajustes de la instancia
+export interface SetupStatus {
+  needs_setup: boolean;
+  company_name: string | null;
+}
+
+export interface SetupDTO {
+  company_name: string;
+  admin_name: string;
+  admin_email: string;
+  admin_password: string;
+}
+
+export interface Settings {
+  company_name: string | null;
+}
+
 // HU-01: ausencias
 export type AbsenceType = 'vacation' | 'sick_leave' | 'leave' | 'other';
 

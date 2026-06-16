@@ -52,7 +52,7 @@ export async function createTestApp(
 
 export async function resetDb(app: FastifyInstance): Promise<void> {
   await app.pg.query(
-    `TRUNCATE notifications, login_logs, attendance, schedule_templates, users
+    `TRUNCATE notifications, login_logs, attendance, schedule_templates, app_settings, users
      RESTART IDENTITY CASCADE`
   );
 }

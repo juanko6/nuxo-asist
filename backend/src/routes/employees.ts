@@ -26,6 +26,7 @@ const UpdateEmployeeSchema = z
   });
 
 const IdParams = z.object({ id: z.string().uuid() });
+const ListQuery = z.object({ status: z.enum(['active', 'inactive', 'all']).default('active') });
 
 const isUniqueViolation = (err: unknown): boolean =>
   typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505';
@@ -33,9 +34,13 @@ const isUniqueViolation = (err: unknown): boolean =>
 export const employeesRoutes: FastifyPluginAsync = async (app) => {
   const adminOnly = { preHandler: [app.authenticate, app.requireAdmin] };
 
-  app.get('/employees', adminOnly, async () => {
+  app.get('/employees', adminOnly, async (request) => {
+    const { status } = ListQuery.parse(request.query);
+    const filter = status === 'all' ? '' : ' AND status = $1';
+    const values = status === 'all' ? [] : [status];
     const { rows } = await app.pg.query<SafeUser>(
-      `SELECT ${SAFE_USER_COLUMNS} FROM users WHERE role = 'employee' ORDER BY name ASC`
+      `SELECT ${SAFE_USER_COLUMNS} FROM users WHERE role = 'employee'${filter} ORDER BY name ASC`,
+      values
     );
     return rows;
   });
@@ -109,10 +114,30 @@ export const employeesRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  app.delete('/employees/:id', adminOnly, async (request, reply) => {
+  // Baja del empleado: NO se borra (la ley obliga a conservar registros 4+ años),
+  // pasa a 'inactive'. Deja de poder acceder y de contar para las ausencias.
+  app.post('/employees/:id/archive', adminOnly, async (request) => {
     const { id } = IdParams.parse(request.params);
-    const { rowCount } = await app.pg.query('DELETE FROM users WHERE id = $1', [id]);
-    if (rowCount === 0) throw notFound('Empleado no encontrado');
-    return reply.code(204).send();
+    const { rows } = await app.pg.query<SafeUser>(
+      `UPDATE users SET status = 'inactive', archived_at = now()
+       WHERE id = $1 AND role = 'employee'
+       RETURNING ${SAFE_USER_COLUMNS}`,
+      [id]
+    );
+    if (!rows[0]) throw notFound('Empleado no encontrado');
+    return rows[0];
+  });
+
+  // Reactivar a un empleado dado de baja.
+  app.post('/employees/:id/restore', adminOnly, async (request) => {
+    const { id } = IdParams.parse(request.params);
+    const { rows } = await app.pg.query<SafeUser>(
+      `UPDATE users SET status = 'active', archived_at = NULL
+       WHERE id = $1 AND role = 'employee'
+       RETURNING ${SAFE_USER_COLUMNS}`,
+      [id]
+    );
+    if (!rows[0]) throw notFound('Empleado no encontrado');
+    return rows[0];
   });
 };

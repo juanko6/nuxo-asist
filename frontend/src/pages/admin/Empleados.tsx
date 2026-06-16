@@ -1,46 +1,101 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, CalendarRange } from 'lucide-react';
+import { Users, Plus, CalendarRange, UserX, RotateCcw } from 'lucide-react';
 import { employeesService } from '@/services/api/employees';
 import { schedulesService } from '@/services/api/schedules';
-import type { User, ScheduleTemplateSummary, EmployeeScheduleView } from '@/types';
-import { Card, Button, Badge, FullSpinner, EmptyState, PageHeader, Modal, Field, Input, Select } from '@/components/ui';
+import type { User, UserStatus, ScheduleTemplateSummary, EmployeeScheduleView } from '@/types';
+import { Card, Button, Badge, FullSpinner, EmptyState, PageHeader, Modal, Field, Input, Select, cn } from '@/components/ui';
 import { useToast } from '@/context/toast';
+import { useConfirm } from '@/context/confirm';
 import { formatDuration, formatDate } from '@/lib/format';
 
 export const AdminEmpleados: React.FC = () => {
   const toast = useToast();
+  const confirm = useConfirm();
+  const [tab, setTab] = useState<Extract<UserStatus, 'active' | 'inactive'>>('active');
   const [employees, setEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<User | null>(null);
 
   const load = useCallback(async () => {
-    setEmployees(await employeesService.getAll());
+    setLoading(true);
+    setEmployees(await employeesService.getAll(tab));
     setLoading(false);
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
 
-  if (loading) return <FullSpinner label="Cargando…" />;
+  const archive = async (e: User) => {
+    const ok = await confirm({
+      title: 'Dar de baja',
+      message: `¿Dar de baja a ${e.name}? Se conserva su historial (retención legal) y podrás reactivarlo cuando quieras. No podrá iniciar sesión.`,
+      confirmLabel: 'Dar de baja',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await employeesService.archive(e.id);
+      toast.success('Empleado dado de baja');
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo dar de baja');
+    }
+  };
+
+  const restore = async (e: User) => {
+    try {
+      await employeesService.restore(e.id);
+      toast.success('Empleado reactivado');
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo reactivar');
+    }
+  };
 
   return (
     <div className="animate-fade-in">
       <PageHeader
         title="Empleados"
-        subtitle={`${employees.length} en plantilla`}
+        subtitle={tab === 'active' ? `${employees.length} en plantilla` : `${employees.length} de baja`}
         actions={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4" /> Nuevo</Button>}
       />
-      {employees.length === 0 ? (
-        <EmptyState icon={<Users className="w-10 h-10" />} title="Sin empleados" />
+
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-4 w-fit">
+        {(['active', 'inactive'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cn(
+              'px-4 py-1.5 rounded-lg text-sm font-medium transition',
+              tab === t ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            )}
+          >
+            {t === 'active' ? 'Activos' : 'Bajas'}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <FullSpinner label="Cargando…" />
+      ) : employees.length === 0 ? (
+        <EmptyState
+          icon={<Users className="w-10 h-10" />}
+          title={tab === 'active' ? 'Sin empleados activos' : 'No hay bajas'}
+        />
       ) : (
         <div className="space-y-2.5">
           {employees.map((e) => (
             <Card key={e.id} className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="grid place-items-center w-10 h-10 rounded-full bg-brand-100 text-brand-700 font-semibold">
+                <div
+                  className={cn(
+                    'grid place-items-center w-10 h-10 rounded-full font-semibold',
+                    tab === 'active' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-400'
+                  )}
+                >
                   {e.name.charAt(0)}
                 </div>
                 <div>
@@ -48,9 +103,27 @@ export const AdminEmpleados: React.FC = () => {
                   <p className="text-xs text-slate-500">{e.position} · {e.department}</p>
                 </div>
               </div>
-              <Button size="sm" variant="secondary" onClick={() => setScheduleFor(e)}>
-                <CalendarRange className="w-4 h-4" /> Horario
-              </Button>
+              {tab === 'active' ? (
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="secondary" onClick={() => setScheduleFor(e)}>
+                    <CalendarRange className="w-4 h-4" /> Horario
+                  </Button>
+                  <button
+                    onClick={() => archive(e)}
+                    title="Dar de baja"
+                    className="grid place-items-center w-9 h-9 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <UserX className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Badge tone="slate">Baja</Badge>
+                  <Button size="sm" variant="secondary" onClick={() => restore(e)}>
+                    <RotateCcw className="w-4 h-4" /> Reactivar
+                  </Button>
+                </div>
+              )}
             </Card>
           ))}
         </div>

@@ -38,6 +38,7 @@ export async function detectAbsences(
     `SELECT u.id, u.email, u.name
      FROM users u
      WHERE u.role = 'employee'
+       AND u.status = 'active'
        AND EXISTS (
          SELECT 1 FROM employee_schedules es
          JOIN schedule_template_days d ON d.template_id = es.template_id

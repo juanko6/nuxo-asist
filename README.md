@@ -81,7 +81,7 @@ tipo "doctor" que comprueba/instala requisitos, descarga el repo, prepara el `.e
 **[docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/juanko6/asist_employed/develop/scripts/install.sh -o nuxoasist-install.sh
+curl -fsSL https://raw.githubusercontent.com/juanko6/asist_employed/main/scripts/install.sh -o nuxoasist-install.sh
 sudo bash nuxoasist-install.sh            # usa --check para solo diagnosticar
 ```
 

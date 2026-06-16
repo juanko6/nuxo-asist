@@ -16,7 +16,7 @@ prepara la configuración y despliega todo con Docker.
 Conéctate por SSH a la VPS y ejecuta:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/juanko6/asist_employed/develop/scripts/install.sh -o nuxoasist-install.sh
+curl -fsSL https://raw.githubusercontent.com/juanko6/asist_employed/main/scripts/install.sh -o nuxoasist-install.sh
 sudo bash nuxoasist-install.sh
 ```
 

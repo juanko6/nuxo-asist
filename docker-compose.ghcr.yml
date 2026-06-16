@@ -1,0 +1,18 @@
+# Despliegue SIN compilar: usa las imágenes ya publicadas en GHCR (en cada release).
+# Ideal para instancias pequeñas (p. ej. Oracle E2.1.Micro, 1 GB de RAM), donde
+# construir en la máquina es lento y se queda sin memoria.
+#
+# Requiere que los paquetes de GHCR sean públicos (o `docker login ghcr.io`).
+# Uso (fija la versión con IMAGE_TAG, p. ej. 1.1.0; por defecto 'latest'):
+#   IMAGE_TAG=1.1.0 docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull
+#   IMAGE_TAG=1.1.0 docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
+name: asist_employed
+
+services:
+  api:
+    image: ghcr.io/juanko6/asist_employed-api:${IMAGE_TAG:-latest}
+    pull_policy: always
+
+  web:
+    image: ghcr.io/juanko6/asist_employed-web:${IMAGE_TAG:-latest}
+    pull_policy: always

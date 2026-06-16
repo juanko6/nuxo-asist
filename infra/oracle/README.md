@@ -65,8 +65,25 @@ Espera ~2-3 min a que `cloud-init` termine (deja el fichero `/opt/asist/PREPARAD
 ```bash
 ssh ubuntu@<public_ip>
 cd /opt/asist
-docker compose up -d --build                       # construye y levanta db + api + web
+```
+
+**Opción recomendada en el micro de 1 GB (sin compilar):** descarga las imágenes ya
+publicadas en GHCR en lugar de construirlas (rápido y sin gastar memoria). Requiere que
+los paquetes GHCR sean **públicos** (GitHub → repo → *Packages* → cada paquete →
+*Package settings* → *Change visibility → Public*), o `docker login ghcr.io`.
+
+```bash
+export IMAGE_TAG=1.1.0
+docker compose -f docker-compose.yml -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.yml -f docker-compose.ghcr.yml up -d
 docker compose ps                                  # comprueba que están 'healthy'
+```
+
+**Alternativa (construir en la máquina):** funciona en instancias con más RAM (Ampere)
+o en el micro gracias al swap, pero es lento:
+
+```bash
+docker compose up -d --build
 ```
 
 La app queda en **http://<public_ip>**. La primera vez muestra el **asistente de

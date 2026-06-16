@@ -1,5 +1,7 @@
 import { api } from './client';
-import type { User, UserStatus, CreateUserDTO, UpdateUserDTO } from '@/types';
+import type {
+  User, UserStatus, CreateUserDTO, UpdateUserDTO, BulkEmployeeRow, BulkImportResult,
+} from '@/types';
 
 export const employeesService = {
   getAll: (status?: UserStatus | 'all'): Promise<User[]> =>
@@ -16,4 +18,7 @@ export const employeesService = {
   archive: (id: string): Promise<User> => api.post<User>(`/employees/${id}/archive`),
 
   restore: (id: string): Promise<User> => api.post<User>(`/employees/${id}/restore`),
+
+  bulkCreate: (employees: BulkEmployeeRow[]): Promise<BulkImportResult> =>
+    api.post<BulkImportResult>('/employees/bulk', { employees }),
 };

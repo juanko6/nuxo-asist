@@ -212,6 +212,92 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /employees/bulk:
+    post:
+      tags: [employees]
+      summary: Alta masiva de empleados
+      description: |
+        Solo admin. Crea varios empleados de una vez (el frontend parsea el CSV).
+        Si una fila no trae contraseña, se genera una temporal y se devuelve.
+        Éxito parcial: crea las filas válidas y reporta las que fallan.
+      operationId: bulkCreateEmployees
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employees]
+              properties:
+                employees:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [name, email, department, position]
+                    properties:
+                      name: { type: string }
+                      email: { type: string, format: email }
+                      department: { type: string }
+                      position: { type: string }
+                      password: { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Resultado del alta masiva
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [created, errors]
+                properties:
+                  created:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        email: { type: string }
+                        password: { type: string, description: Contraseña (temporal) a repartir }
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row: { type: integer }
+                        email: { type: string }
+                        error: { type: string }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /me/password:
+    post:
+      tags: [system]
+      summary: Cambiar la propia contraseña
+      description: Cualquier usuario autenticado. Limpia el flag de cambio obligatorio del primer acceso.
+      operationId: changeMyPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string }
+                new_password: { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Contraseña actualizada
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /employees/{id}/archive:
     post:
       tags: [employees]
@@ -1146,7 +1232,7 @@ components:
 
     User:
       type: object
-      required: [id, email, name, role, department, position, status, archived_at, created_at]
+      required: [id, email, name, role, department, position, status, archived_at, must_change_password, created_at]
       properties:
         id:
           type: string
@@ -1169,6 +1255,8 @@ components:
         archived_at:
           type: ['string', 'null']
           format: date-time
+        must_change_password:
+          type: boolean
         created_at:
           type: string
           format: date-time

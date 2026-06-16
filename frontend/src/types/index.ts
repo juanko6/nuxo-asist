@@ -10,7 +10,21 @@ export interface User {
   position: string;
   status?: UserStatus;
   archived_at?: string | null;
+  must_change_password?: boolean;
   created_at?: string;
+}
+
+export interface BulkEmployeeRow {
+  name: string;
+  email: string;
+  department: string;
+  position: string;
+  password?: string;
+}
+
+export interface BulkImportResult {
+  created: { name: string; email: string; password: string }[];
+  errors: { row: number; email: string; error: string }[];
 }
 
 export interface CreateUserDTO {

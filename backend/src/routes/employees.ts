@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { conflict, forbidden, notFound } from '../lib/errors.js';
@@ -12,6 +13,21 @@ const CreateEmployeeSchema = z.object({
   department: z.string().min(1),
   position: z.string().min(1),
 });
+
+// Alta masiva: la contraseña es opcional (si falta, se genera una temporal).
+const BulkRowSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  department: z.string().min(1),
+  position: z.string().min(1),
+  password: z.string().min(8).optional(),
+});
+const BulkSchema = z.object({
+  employees: z.array(z.record(z.unknown())).min(1).max(200),
+});
+
+/** Contraseña temporal legible (8 caracteres) para los empleados importados. */
+const generateTempPassword = (): string => crypto.randomBytes(6).toString('base64url');
 
 const UpdateEmployeeSchema = z
   .object({
@@ -50,8 +66,8 @@ export const employeesRoutes: FastifyPluginAsync = async (app) => {
     const hash = await bcrypt.hash(input.password, app.config.bcryptRounds);
     try {
       const { rows } = await app.pg.query<SafeUser>(
-        `INSERT INTO users (name, email, password_hash, role, department, position)
-         VALUES ($1, $2, $3, 'employee', $4, $5)
+        `INSERT INTO users (name, email, password_hash, role, department, position, must_change_password)
+         VALUES ($1, $2, $3, 'employee', $4, $5, true)
          RETURNING ${SAFE_USER_COLUMNS}`,
         [input.name, input.email, hash, input.department, input.position]
       );
@@ -62,6 +78,46 @@ export const employeesRoutes: FastifyPluginAsync = async (app) => {
       }
       throw err;
     }
+  });
+
+  // Alta masiva desde fichero (el frontend parsea el CSV y manda el array).
+  // Éxito parcial: crea las filas válidas y reporta los errores fila a fila.
+  app.post('/employees/bulk', adminOnly, async (request) => {
+    const { employees } = BulkSchema.parse(request.body);
+
+    const created: { name: string; email: string; password: string }[] = [];
+    const errors: { row: number; email: string; error: string }[] = [];
+
+    for (const [i, raw] of employees.entries()) {
+      const parsed = BulkRowSchema.safeParse(raw);
+      if (!parsed.success) {
+        errors.push({
+          row: i + 1,
+          email: typeof (raw as { email?: unknown }).email === 'string' ? (raw as { email: string }).email : '',
+          error: 'Datos inválidos (revisa nombre, email, departamento y puesto)',
+        });
+        continue;
+      }
+      const row = parsed.data;
+      const password = row.password ?? generateTempPassword();
+      try {
+        const hash = await bcrypt.hash(password, app.config.bcryptRounds);
+        await app.pg.query(
+          `INSERT INTO users (name, email, password_hash, role, department, position, must_change_password)
+           VALUES ($1, $2, $3, 'employee', $4, $5, true)`,
+          [row.name, row.email, hash, row.department, row.position]
+        );
+        created.push({ name: row.name, email: row.email, password });
+      } catch (err) {
+        errors.push({
+          row: i + 1,
+          email: row.email,
+          error: isUniqueViolation(err) ? 'Ya existe un usuario con ese email' : 'No se pudo crear',
+        });
+      }
+    }
+
+    return { created, errors };
   });
 
   app.get('/employees/:id', { preHandler: [app.authenticate] }, async (request) => {

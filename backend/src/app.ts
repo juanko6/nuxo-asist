@@ -24,7 +24,7 @@ import { loginLogsRoutes } from './routes/loginLogs.js';
 import type { SafeUser } from './types.js';
 
 export const SAFE_USER_COLUMNS =
-  'id, email, name, role, department, position, status, archived_at, created_at';
+  'id, email, name, role, department, position, status, archived_at, must_change_password, created_at';
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({

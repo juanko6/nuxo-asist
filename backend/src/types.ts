@@ -15,6 +15,7 @@ export interface SafeUser {
   position: string;
   status: UserStatus;
   archived_at: Date | null;
+  must_change_password: boolean;
   created_at: Date;
 }
 

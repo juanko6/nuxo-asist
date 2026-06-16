@@ -10,7 +10,8 @@ por SSH) y la app se sirve por **HTTP en la IP pública**.
 - Red: VCN, Internet Gateway, tabla de rutas, *security list* (22, 80, 443) y subred pública.
 - Instancia `VM.Standard.A1.Flex` (4 OCPU, 24 GB) con Ubuntu 22.04 ARM e IP pública.
 - `cloud-init` instala Docker + compose, abre 80/443 en el firewall local, clona la rama
-  `develop` en `/opt/asist` y genera un `.env` con secretos aleatorios y `WEB_PORT=80`.
+  configurable `repo_ref` (por defecto `main`, la versión estable) en `/opt/asist` y genera
+  un `.env` con secretos aleatorios y `WEB_PORT=80`.
 
 ---
 

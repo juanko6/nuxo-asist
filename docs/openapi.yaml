@@ -25,6 +25,8 @@ tags:
     description: Plantillas de horario y asignación por empleado (solo admin)
   - name: system
     description: Configuración inicial (onboarding) y ajustes de la instancia
+  - name: kiosk
+    description: Modo kiosco (fichaje por PIN/QR en dispositivo compartido)
   - name: absences
     description: Ausencias (vacaciones, bajas, permisos)
   - name: notifications
@@ -297,6 +299,112 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /employees/{id}/pin:
+    put:
+      tags: [employees]
+      summary: Asignar/quitar el PIN de kiosco de un empleado
+      description: Solo admin. `pin` numérico de 4-8 dígitos, o null para quitarlo.
+      operationId: setEmployeePin
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pin]
+              properties:
+                pin:
+                  type: ['string', 'null']
+                  pattern: '^\d{4,8}$'
+      responses:
+        '200':
+          description: PIN actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Ese PIN ya está en uso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /kiosk/token:
+    post:
+      tags: [kiosk]
+      summary: Activar un dispositivo como kiosco
+      description: Solo admin. Devuelve un token de larga duración (rol kiosk) para el dispositivo.
+      operationId: createKioskToken
+      responses:
+        '200':
+          description: Token de kiosco
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /kiosk/punch:
+    post:
+      tags: [kiosk]
+      summary: Fichar en el kiosco (PIN/QR)
+      description: Requiere token de kiosco. Alterna entrada/salida del empleado con ese PIN.
+      operationId: kioskPunch
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                  pattern: '^\d{4,8}$'
+      responses:
+        '200':
+          description: Fichaje realizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  action: { type: string, enum: [check_in, check_out] }
+                  employee_name: { type: string }
+                  time: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: PIN no reconocido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflicto (pausa abierta o fichaje abierto)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /employees/{id}/archive:
     post:
@@ -973,7 +1081,7 @@ paths:
   /settings:
     get:
       tags: [system]
-      summary: Ajustes públicos (branding)
+      summary: Ajustes públicos (branding y geolocalización)
       operationId: getSettings
       responses:
         '200':
@@ -982,14 +1090,22 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [company_name]
                 properties:
                   company_name:
                     type: ['string', 'null']
+                  geolocation_mode:
+                    type: string
+                    enum: [off, optional, required]
+                  geofence_lat:
+                    type: ['number', 'null']
+                  geofence_lng:
+                    type: ['number', 'null']
+                  geofence_radius_m:
+                    type: ['integer', 'null']
     put:
       tags: [system]
-      summary: Editar el nombre de empresa
-      description: Solo admin.
+      summary: Editar ajustes (nombre y geolocalización)
+      description: Solo admin. Acepta cualquier subconjunto de campos.
       operationId: updateSettings
       requestBody:
         required: true
@@ -997,12 +1113,20 @@ paths:
           application/json:
             schema:
               type: object
-              required: [company_name]
               properties:
                 company_name:
                   type: string
                   minLength: 2
                   maxLength: 60
+                geolocation_mode:
+                  type: string
+                  enum: [off, optional, required]
+                geofence_lat:
+                  type: ['number', 'null']
+                geofence_lng:
+                  type: ['number', 'null']
+                geofence_radius_m:
+                  type: ['integer', 'null']
       responses:
         '200':
           description: Ajustes actualizados
@@ -1290,6 +1414,9 @@ components:
           format: date-time
         must_change_password:
           type: boolean
+        has_pin:
+          type: boolean
+          description: Si el empleado tiene un PIN de kiosco configurado (HU-08)
         created_at:
           type: string
           format: date-time
@@ -1365,6 +1492,19 @@ components:
           type: string
           enum: [confirmed, pending_validation, rejected]
           description: Estado de validación (las entradas manuales nacen pendientes)
+        check_in_lat:
+          type: ['number', 'null']
+        check_in_lng:
+          type: ['number', 'null']
+        check_in_outside:
+          type: ['boolean', 'null']
+          description: Si la entrada cayó fuera de la geocerca (HU-07)
+        check_out_lat:
+          type: ['number', 'null']
+        check_out_lng:
+          type: ['number', 'null']
+        check_out_outside:
+          type: ['boolean', 'null']
         created_at:
           type: string
           format: date-time
@@ -1462,12 +1602,16 @@ components:
     FichajeIntent:
       type: object
       description: |
-        Hora de la intención del fichaje (HU-06). El servidor solo la respeta si
-        cae en los últimos 2 minutos; en otro caso usa su propia hora.
+        Hora de la intención del fichaje (HU-06; respetada solo si cae en los
+        últimos 2 minutos) y ubicación opcional (HU-07) para entrada/salida.
       properties:
         intended_at:
           type: string
           format: date-time
+        lat:
+          type: number
+        lng:
+          type: number
 
     ManualEntry:
       type: object

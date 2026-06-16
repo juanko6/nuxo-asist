@@ -30,12 +30,18 @@ export const attendanceService = {
   getById: (id: string): Promise<AttendanceDetail> =>
     api.get<AttendanceDetail>(`/attendance/${id}`),
 
-  // intendedAt (HU-06): hora del primer clic; el server la respeta si es < 2 min
-  checkIn: (intendedAt?: string): Promise<AttendanceRecord> =>
-    api.post<AttendanceRecord>('/attendance/check-in', intendedAt ? { intended_at: intendedAt } : undefined),
+  // intendedAt (HU-06): hora del primer clic; coords (HU-07): ubicación opcional
+  checkIn: (intendedAt?: string, coords?: { lat: number; lng: number }): Promise<AttendanceRecord> =>
+    api.post<AttendanceRecord>('/attendance/check-in', {
+      ...(intendedAt ? { intended_at: intendedAt } : {}),
+      ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
+    }),
 
-  checkOut: (intendedAt?: string): Promise<AttendanceRecord> =>
-    api.post<AttendanceRecord>('/attendance/check-out', intendedAt ? { intended_at: intendedAt } : undefined),
+  checkOut: (intendedAt?: string, coords?: { lat: number; lng: number }): Promise<AttendanceRecord> =>
+    api.post<AttendanceRecord>('/attendance/check-out', {
+      ...(intendedAt ? { intended_at: intendedAt } : {}),
+      ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
+    }),
 
   // HU-02: registro olvidado (entrada manual) y validación
   createManualEntry: (data: ManualEntryDTO): Promise<AttendanceRecord> =>

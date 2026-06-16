@@ -20,12 +20,13 @@ import { schedulesRoutes } from './routes/schedules.js';
 import { absencesRoutes } from './routes/absences.js';
 import { setupRoutes } from './routes/setup.js';
 import { supportRoutes } from './routes/support.js';
+import { kioskRoutes } from './routes/kiosk.js';
 import { notificationsRoutes } from './routes/notifications.js';
 import { loginLogsRoutes } from './routes/loginLogs.js';
 import type { SafeUser } from './types.js';
 
 export const SAFE_USER_COLUMNS =
-  'id, email, name, role, department, position, status, archived_at, must_change_password, created_at';
+  'id, email, name, role, department, position, status, archived_at, must_change_password, (pin_hash IS NOT NULL) AS has_pin, created_at';
 
 export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   const app = Fastify({
@@ -86,6 +87,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
 
   await app.register(cors, {
     origin: config.corsOrigin.split(',').map((o) => o.trim()),
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   await app.register(jwt, {
@@ -143,6 +145,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await app.register(absencesRoutes, { prefix: '/api/v1' });
   await app.register(setupRoutes, { prefix: '/api/v1' });
   await app.register(supportRoutes, { prefix: '/api/v1' });
+  await app.register(kioskRoutes, { prefix: '/api/v1' });
   await app.register(notificationsRoutes, { prefix: '/api/v1' });
   await app.register(loginLogsRoutes, { prefix: '/api/v1' });
 

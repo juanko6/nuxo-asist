@@ -70,3 +70,9 @@ variable "ssh_ingress_cidr" {
   default     = "0.0.0.0/0"
   description = "Origen permitido para SSH (22). Restríngelo a TU_IP/32 para más seguridad."
 }
+
+variable "repo_ref" {
+  type        = string
+  default     = "main"
+  description = "Rama o etiqueta del repo a desplegar (main = versión estable)."
+}

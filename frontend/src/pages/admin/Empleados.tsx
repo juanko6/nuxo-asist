@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, CalendarRange, UserX, RotateCcw, Upload } from 'lucide-react';
+import { Users, Plus, CalendarRange, UserX, RotateCcw, Upload, KeyRound } from 'lucide-react';
 import { employeesService } from '@/services/api/employees';
 import { ImportEmpleadosModal } from './ImportEmpleadosModal';
+import { PinModal } from './PinModal';
 import { schedulesService } from '@/services/api/schedules';
 import type { User, UserStatus, ScheduleTemplateSummary, EmployeeScheduleView } from '@/types';
 import { Card, Button, Badge, FullSpinner, EmptyState, PageHeader, Modal, Field, Input, Select, cn } from '@/components/ui';
@@ -18,6 +19,7 @@ export const AdminEmpleados: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<User | null>(null);
+  const [pinFor, setPinFor] = useState<User | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,6 +122,16 @@ export const AdminEmpleados: React.FC = () => {
                     <CalendarRange className="w-4 h-4" /> Horario
                   </Button>
                   <button
+                    onClick={() => setPinFor(e)}
+                    title="PIN de kiosco"
+                    className={
+                      'grid place-items-center w-9 h-9 rounded-xl hover:bg-slate-100 ' +
+                      (e.has_pin ? 'text-brand-600' : 'text-slate-400 hover:text-brand-600')
+                    }
+                  >
+                    <KeyRound className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => archive(e)}
                     title="Dar de baja"
                     className="grid place-items-center w-9 h-9 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600"
@@ -156,6 +168,14 @@ export const AdminEmpleados: React.FC = () => {
           employee={scheduleFor}
           onClose={() => setScheduleFor(null)}
           onDone={(m) => toast.success(m)}
+          onError={(m) => toast.error(m)}
+        />
+      )}
+      {pinFor && (
+        <PinModal
+          employee={pinFor}
+          onClose={() => setPinFor(null)}
+          onSaved={async () => { toast.success('PIN actualizado'); await load(); }}
           onError={(m) => toast.error(m)}
         />
       )}

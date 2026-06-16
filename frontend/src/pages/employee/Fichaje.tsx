@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  LogIn, LogOut, Coffee, Play, Bell, CheckCircle2, Plus, ShieldAlert, Hourglass,
+  LogIn, LogOut, Coffee, Play, Bell, CheckCircle2, Plus, ShieldAlert, Hourglass, MapPin,
 } from 'lucide-react';
 import { attendanceService } from '@/services/api/attendance';
 import { schedulesService } from '@/services/api/schedules';
@@ -8,6 +8,7 @@ import type { AttendanceDetail, EmployeeScheduleActive } from '@/types';
 import { Button, Card, Badge, FullSpinner, Modal, Field, Input } from '@/components/ui';
 import { useConfirm } from '@/context/confirm';
 import { useToast } from '@/context/toast';
+import { useSettings } from '@/context/settings';
 import { formatTime, formatDuration } from '@/lib/format';
 
 const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
@@ -25,6 +26,27 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'Algo salió ma
 export const FichajePage: React.FC = () => {
   const confirm = useConfirm();
   const toast = useToast();
+  const { settings } = useSettings();
+  const geoMode = settings?.geolocation_mode ?? 'off';
+
+  // HU-07: obtiene la ubicación si está activada. En modo obligatorio, deniega
+  // el fichaje si el usuario no concede el permiso.
+  const getCoords = (): Promise<{ lat: number; lng: number } | null> =>
+    new Promise((resolve, reject) => {
+      if (geoMode === 'off') return resolve(null);
+      if (!navigator.geolocation) {
+        if (geoMode === 'required') return reject(new Error('Tu navegador no permite geolocalización'));
+        return resolve(null);
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {
+          if (geoMode === 'required') reject(new Error('Debes permitir la ubicación para fichar'));
+          else resolve(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
   const [today, setToday] = useState<AttendanceDetail | null>(null);
   const [schedule, setSchedule] = useState<EmployeeScheduleActive | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,7 +178,7 @@ export const FichajePage: React.FC = () => {
             <Button
               block size="lg" variant="success"
               onClick={() =>
-                run(() => attendanceService.checkIn(intendedNow()), {
+                run(async () => attendanceService.checkIn(intendedNow(), (await getCoords()) ?? undefined), {
                   title: 'Marcar entrada', verb: 'tu entrada', tone: 'success', okMsg: 'Entrada registrada',
                 })
               }
@@ -180,7 +202,7 @@ export const FichajePage: React.FC = () => {
               <Button
                 size="lg" variant="danger"
                 onClick={() =>
-                  run(() => attendanceService.checkOut(intendedNow()), {
+                  run(async () => attendanceService.checkOut(intendedNow(), (await getCoords()) ?? undefined), {
                     title: 'Marcar salida', verb: 'tu salida', tone: 'danger', okMsg: 'Salida registrada',
                   })
                 }
@@ -262,6 +284,13 @@ export const FichajePage: React.FC = () => {
       {!schedule && (
         <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
           <ShieldAlert className="w-3.5 h-3.5" /> No tienes un horario asignado; pídeselo a tu responsable.
+        </div>
+      )}
+
+      {geoMode !== 'off' && (
+        <div className="flex items-center gap-2 text-xs text-slate-400 px-1">
+          <MapPin className="w-3.5 h-3.5" /> Tu ubicación se registrará al fichar
+          {geoMode === 'required' ? ' (obligatorio)' : ' (si lo permites)'}.
         </div>
       )}
 

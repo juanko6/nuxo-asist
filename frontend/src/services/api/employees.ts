@@ -21,4 +21,7 @@ export const employeesService = {
 
   bulkCreate: (employees: BulkEmployeeRow[]): Promise<BulkImportResult> =>
     api.post<BulkImportResult>('/employees/bulk', { employees }),
+
+  setPin: (id: string, pin: string | null): Promise<User> =>
+    api.put<User>(`/employees/${id}/pin`, { pin }),
 };

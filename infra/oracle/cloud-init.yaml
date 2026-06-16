@@ -21,7 +21,7 @@ runcmd:
   - netfilter-persistent save
 
   # Código y configuración listos para desplegar
-  - git clone -b develop https://github.com/juanko6/asist_employed.git /opt/asist
+  - git clone -b ${repo_ref} https://github.com/juanko6/asist_employed.git /opt/asist
   - cp /opt/asist/.env.example /opt/asist/.env
   - sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" /opt/asist/.env
   - sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 16)|" /opt/asist/.env

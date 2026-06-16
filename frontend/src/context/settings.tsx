@@ -1,21 +1,22 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { settingsService } from '@/services/api/setup';
+import type { Settings } from '@/types';
 
 interface SettingsValue {
   companyName: string | null;
+  settings: Settings | null;
   refresh: () => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsValue | null>(null);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const s = await settingsService.get();
-      setCompanyName(s.company_name);
+      setSettings(await settingsService.get());
     } catch {
       // ajustes no disponibles aún (p. ej. antes del onboarding)
     }
@@ -24,14 +25,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     settingsService
       .get()
-      .then((s) => setCompanyName(s.company_name))
+      .then(setSettings)
       .catch(() => {
-        // ajustes no disponibles aún (p. ej. antes del onboarding)
+        // ignorar
       });
   }, []);
 
   return (
-    <SettingsContext.Provider value={{ companyName, refresh }}>
+    <SettingsContext.Provider value={{ companyName: settings?.company_name ?? null, settings, refresh }}>
       {children}
     </SettingsContext.Provider>
   );

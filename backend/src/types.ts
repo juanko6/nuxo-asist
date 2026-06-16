@@ -32,6 +32,12 @@ export interface AttendanceRecord {
   overtime_approved: boolean;
   source: AttendanceSource;
   status: AttendanceStatus;
+  check_in_lat: number | null;
+  check_in_lng: number | null;
+  check_in_outside: boolean | null;
+  check_out_lat: number | null;
+  check_out_lng: number | null;
+  check_out_outside: boolean | null;
   created_at: Date;
 }
 

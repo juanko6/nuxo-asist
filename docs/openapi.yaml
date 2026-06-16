@@ -973,7 +973,7 @@ paths:
   /settings:
     get:
       tags: [system]
-      summary: Ajustes públicos (branding)
+      summary: Ajustes públicos (branding y geolocalización)
       operationId: getSettings
       responses:
         '200':
@@ -982,14 +982,22 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [company_name]
                 properties:
                   company_name:
                     type: ['string', 'null']
+                  geolocation_mode:
+                    type: string
+                    enum: [off, optional, required]
+                  geofence_lat:
+                    type: ['number', 'null']
+                  geofence_lng:
+                    type: ['number', 'null']
+                  geofence_radius_m:
+                    type: ['integer', 'null']
     put:
       tags: [system]
-      summary: Editar el nombre de empresa
-      description: Solo admin.
+      summary: Editar ajustes (nombre y geolocalización)
+      description: Solo admin. Acepta cualquier subconjunto de campos.
       operationId: updateSettings
       requestBody:
         required: true
@@ -997,12 +1005,20 @@ paths:
           application/json:
             schema:
               type: object
-              required: [company_name]
               properties:
                 company_name:
                   type: string
                   minLength: 2
                   maxLength: 60
+                geolocation_mode:
+                  type: string
+                  enum: [off, optional, required]
+                geofence_lat:
+                  type: ['number', 'null']
+                geofence_lng:
+                  type: ['number', 'null']
+                geofence_radius_m:
+                  type: ['integer', 'null']
       responses:
         '200':
           description: Ajustes actualizados
@@ -1365,6 +1381,19 @@ components:
           type: string
           enum: [confirmed, pending_validation, rejected]
           description: Estado de validación (las entradas manuales nacen pendientes)
+        check_in_lat:
+          type: ['number', 'null']
+        check_in_lng:
+          type: ['number', 'null']
+        check_in_outside:
+          type: ['boolean', 'null']
+          description: Si la entrada cayó fuera de la geocerca (HU-07)
+        check_out_lat:
+          type: ['number', 'null']
+        check_out_lng:
+          type: ['number', 'null']
+        check_out_outside:
+          type: ['boolean', 'null']
         created_at:
           type: string
           format: date-time
@@ -1462,12 +1491,16 @@ components:
     FichajeIntent:
       type: object
       description: |
-        Hora de la intención del fichaje (HU-06). El servidor solo la respeta si
-        cae en los últimos 2 minutos; en otro caso usa su propia hora.
+        Hora de la intención del fichaje (HU-06; respetada solo si cae en los
+        últimos 2 minutos) y ubicación opcional (HU-07) para entrada/salida.
       properties:
         intended_at:
           type: string
           format: date-time
+        lat:
+          type: number
+        lng:
+          type: number
 
     ManualEntry:
       type: object

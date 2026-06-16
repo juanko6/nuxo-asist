@@ -86,6 +86,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
 
   await app.register(cors, {
     origin: config.corsOrigin.split(',').map((o) => o.trim()),
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   await app.register(jwt, {

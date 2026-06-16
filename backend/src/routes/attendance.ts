@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { conflict, forbidden, notFound } from '../lib/errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { recordAudit } from '../lib/audit.js';
+import { outsideGeofence, type Geofence } from '../lib/geo.js';
 import type {
   AttendanceRecord,
   AttendancePause,
@@ -23,6 +24,13 @@ const PauseStartSchema = z.object({
 
 const IntentSchema = z.object({
   intended_at: z.string().datetime({ offset: true }).optional(),
+});
+
+// Entrada/salida: hora de intención (HU-06) + ubicación opcional (HU-07).
+const PunchSchema = z.object({
+  intended_at: z.string().datetime({ offset: true }).optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 });
 
 // HU-06: el cliente puede mandar la hora de la "intención" (el primer clic). Se
@@ -113,6 +121,28 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
 
   const tz = () => app.config.appTimezone;
 
+  // Config de geolocalización (HU-07): modo + geocerca (si está definida).
+  const loadGeo = async (): Promise<{
+    mode: 'off' | 'optional' | 'required';
+    fence: Geofence | null;
+  }> => {
+    const { rows } = await app.pg.query<{
+      geolocation_mode: 'off' | 'optional' | 'required';
+      geofence_lat: number | null;
+      geofence_lng: number | null;
+      geofence_radius_m: number | null;
+    }>(
+      `SELECT geolocation_mode, geofence_lat, geofence_lng, geofence_radius_m
+       FROM app_settings WHERE id = 1`
+    );
+    const s = rows[0];
+    const fence =
+      s && s.geofence_lat != null && s.geofence_lng != null && s.geofence_radius_m != null
+        ? { lat: s.geofence_lat, lng: s.geofence_lng, radius_m: s.geofence_radius_m }
+        : null;
+    return { mode: s?.geolocation_mode ?? 'off', fence };
+  };
+
   app.get('/attendance', { preHandler: [app.authenticate] }, async (request) => {
     const query = ListQuerySchema.parse(request.query);
     const conditions: string[] = [];
@@ -144,7 +174,13 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
 
   app.post('/attendance/check-in', employeeOnly, async (request, reply) => {
     const { id: employeeId, name } = request.currentUser;
-    const { intended_at } = IntentSchema.parse(request.body ?? {});
+    const { intended_at, lat, lng } = PunchSchema.parse(request.body ?? {});
+
+    const geo = await loadGeo();
+    if (geo.mode === 'required' && (lat === undefined || lng === undefined)) {
+      throw badRequest('Se requiere tu ubicación para fichar');
+    }
+    const outside = outsideGeofence(lat, lng, geo.fence);
 
     const { rows: existing } = await app.pg.query(
       `SELECT id FROM attendance
@@ -158,10 +194,11 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const { rows } = await app.pg.query<AttendanceRecord>(
-        `INSERT INTO attendance (employee_id, employee_name, check_in)
-         VALUES ($1, $2, $3)
+        `INSERT INTO attendance
+           (employee_id, employee_name, check_in, check_in_lat, check_in_lng, check_in_outside)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
-        [employeeId, name, effectiveTime(intended_at)]
+        [employeeId, name, effectiveTime(intended_at), lat ?? null, lng ?? null, outside]
       );
       return reply.code(201).send(rows[0]);
     } catch (err) {
@@ -173,7 +210,14 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.post('/attendance/check-out', employeeOnly, async (request) => {
-    const { intended_at } = IntentSchema.parse(request.body ?? {});
+    const { intended_at, lat, lng } = PunchSchema.parse(request.body ?? {});
+
+    const geo = await loadGeo();
+    if (geo.mode === 'required' && (lat === undefined || lng === undefined)) {
+      throw badRequest('Se requiere tu ubicación para fichar');
+    }
+    const outside = outsideGeofence(lat, lng, geo.fence);
+
     const { rows: openPause } = await app.pg.query(
       `SELECT 1 FROM attendance_pauses p
        JOIN attendance a ON a.id = p.attendance_id
@@ -185,12 +229,14 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const { rows } = await app.pg.query<AttendanceRecord>(
-      `UPDATE attendance SET check_out = GREATEST($3::timestamptz, check_in)
+      `UPDATE attendance
+       SET check_out = GREATEST($3::timestamptz, check_in),
+           check_out_lat = $4, check_out_lng = $5, check_out_outside = $6
        WHERE employee_id = $1
        AND check_out IS NULL
        AND (check_in AT TIME ZONE $2)::date = (now() AT TIME ZONE $2)::date
        RETURNING *`,
-      [request.currentUser.id, tz(), effectiveTime(intended_at)]
+      [request.currentUser.id, tz(), effectiveTime(intended_at), lat ?? null, lng ?? null, outside]
     );
     if (!rows[0]) {
       throw conflict('No hay un fichaje de entrada abierto hoy');

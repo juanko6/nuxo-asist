@@ -73,6 +73,20 @@ Los tests del backend necesitan la BD de Docker levantada: `pnpm test`.
 
 ## Despliegue en producción (Docker)
 
+### Vía rápida: instalador para VPS
+
+Para montar la app en una VPS nueva (Ubuntu/Debian) en un comando, hay un instalador
+tipo "doctor" que comprueba/instala requisitos, descarga el repo, prepara el `.env`
+(con dominio opcional para HTTPS) y despliega. Guía completa en
+**[docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)**:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/juanko6/asist_employed/develop/scripts/install.sh -o nuxoasist-install.sh
+sudo bash nuxoasist-install.sh            # usa --check para solo diagnosticar
+```
+
+### Manual
+
 Todo el stack —PostgreSQL, API y frontend con nginx— corre en un solo servidor con `docker compose`. No hace falta Node ni pnpm instalados en la máquina: las imágenes se construyen solas.
 
 ```bash

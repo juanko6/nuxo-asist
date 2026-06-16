@@ -16,6 +16,7 @@ export interface SafeUser {
   status: UserStatus;
   archived_at: Date | null;
   must_change_password: boolean;
+  has_pin: boolean;
   created_at: Date;
 }
 
@@ -127,7 +128,8 @@ declare module 'fastify' {
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: { sub: string; role: Role };
-    user: { sub: string; role: Role };
+    // Token de empleado/admin (con sub) o token de kiosco (HU-08, sin sub).
+    payload: { sub: string; role: Role } | { role: 'kiosk' };
+    user: { sub: string; role: Role } | { role: 'kiosk' };
   }
 }

@@ -196,4 +196,23 @@ export const employeesRoutes: FastifyPluginAsync = async (app) => {
     if (!rows[0]) throw notFound('Empleado no encontrado');
     return rows[0];
   });
+
+  // PIN para el modo kiosco (HU-08). pin=null lo borra. Se guarda hasheado.
+  app.put('/employees/:id/pin', adminOnly, async (request) => {
+    const { id } = IdParams.parse(request.params);
+    const { pin } = z.object({ pin: z.string().regex(/^\d{4,8}$/).nullable() }).parse(request.body);
+    const pinHash = pin === null ? null : crypto.createHash('sha256').update(pin).digest('hex');
+    try {
+      const { rows } = await app.pg.query<SafeUser>(
+        `UPDATE users SET pin_hash = $2 WHERE id = $1 AND role = 'employee'
+         RETURNING ${SAFE_USER_COLUMNS}`,
+        [id, pinHash]
+      );
+      if (!rows[0]) throw notFound('Empleado no encontrado');
+      return rows[0];
+    } catch (err) {
+      if (isUniqueViolation(err)) throw conflict('Ese PIN ya está en uso por otro empleado');
+      throw err;
+    }
+  });
 };

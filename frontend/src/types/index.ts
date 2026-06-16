@@ -11,6 +11,7 @@ export interface User {
   status?: UserStatus;
   archived_at?: string | null;
   must_change_password?: boolean;
+  has_pin?: boolean;
   created_at?: string;
 }
 

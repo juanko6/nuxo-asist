@@ -62,6 +62,12 @@ export interface AttendanceRecord {
   overtime_approved: boolean;
   source: AttendanceSource;
   status: AttendanceStatus;
+  check_in_lat?: number | null;
+  check_in_lng?: number | null;
+  check_in_outside?: boolean | null;
+  check_out_lat?: number | null;
+  check_out_lng?: number | null;
+  check_out_outside?: boolean | null;
   created_at?: string;
 }
 
@@ -177,9 +183,23 @@ export interface SetupDTO {
   admin_password: string;
 }
 
+export type GeolocationMode = 'off' | 'optional' | 'required';
+
 export interface Settings {
   company_name: string | null;
+  geolocation_mode?: GeolocationMode;
+  geofence_lat?: number | null;
+  geofence_lng?: number | null;
+  geofence_radius_m?: number | null;
 }
+
+export type SettingsUpdate = Partial<{
+  company_name: string;
+  geolocation_mode: GeolocationMode;
+  geofence_lat: number | null;
+  geofence_lng: number | null;
+  geofence_radius_m: number | null;
+}>;
 
 export interface SupportTicketDTO {
   subject: string;

@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { SetupStatus, SetupDTO, Settings } from '@/types';
+import type { SetupStatus, SetupDTO, Settings, SettingsUpdate } from '@/types';
 
 export const setupService = {
   status: (): Promise<SetupStatus> => api.get<SetupStatus>('/setup/status'),
@@ -9,6 +9,5 @@ export const setupService = {
 
 export const settingsService = {
   get: (): Promise<Settings> => api.get<Settings>('/settings'),
-  update: (companyName: string): Promise<Settings> =>
-    api.put<Settings>('/settings', { company_name: companyName }),
+  update: (patch: SettingsUpdate): Promise<Settings> => api.put<Settings>('/settings', patch),
 };

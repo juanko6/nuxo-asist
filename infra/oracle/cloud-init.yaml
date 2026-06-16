@@ -9,7 +9,15 @@ packages:
   - openssl
 
 runcmd:
-  # Docker (script oficial, compatible ARM64) + plugin compose
+  # Swap (3 GB): en instancias pequeñas (E2.1.Micro, 1 GB) evita que el build
+  # de Docker se quede sin memoria. Inofensivo en instancias grandes.
+  - test -f /swapfile || fallocate -l 3G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=3072
+  - chmod 600 /swapfile
+  - mkswap /swapfile
+  - swapon /swapfile
+  - grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+  # Docker (script oficial, compatible x86 y ARM64) + plugin compose
   - curl -fsSL https://get.docker.com | sh
   - usermod -aG docker ubuntu
   - systemctl enable --now docker

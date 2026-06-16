@@ -1,14 +1,24 @@
 # Despliegue en Oracle Cloud (IaC con Terraform)
 
-Provisiona en Oracle Cloud (capa **Always Free**) una red completa y una instancia
-**Ampere A1** (4 OCPU / 24 GB RAM, ARM64) con Docker instalado y el repo listo para
-desplegar. En esta primera versión el despliegue de la app es **manual** (un comando
-por SSH) y la app se sirve por **HTTP en la IP pública**.
+Provisiona en Oracle Cloud (capa **Always Free**) una red completa y una instancia con
+Docker instalado y el repo listo para desplegar. El despliegue de la app es **manual**
+(un comando por SSH) y la app se sirve por **HTTP en la IP pública**.
+
+Por defecto usa el shape **`VM.Standard.E2.1.Micro`** (x86, 1 GB RAM), que casi siempre
+tiene disponibilidad. Para usar el **Ampere A1** (hasta 4 OCPU / 24 GB, ARM, pero suele
+saturarse) define en `terraform.tfvars`:
+
+```hcl
+instance_shape = "VM.Standard.A1.Flex"
+# ocpus = 4
+# memory_in_gbs = 24
+```
 
 ## Qué crea
 
 - Red: VCN, Internet Gateway, tabla de rutas, *security list* (22, 80, 443) y subred pública.
-- Instancia `VM.Standard.A1.Flex` (4 OCPU, 24 GB) con Ubuntu 22.04 ARM e IP pública.
+- Instancia `${instance_shape}` con Ubuntu 22.04 (x86 o ARM según el shape) e IP pública.
+- El `cloud-init` crea **3 GB de swap** (clave en el micro de 1 GB para que el build no se quede sin memoria).
 - `cloud-init` instala Docker + compose, abre 80/443 en el firewall local, clona la rama
   configurable `repo_ref` (por defecto `main`, la versión estable) en `/opt/asist` y genera
   un `.env` con secretos aleatorios y `WEB_PORT=80`.

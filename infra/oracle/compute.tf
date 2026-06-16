@@ -1,9 +1,9 @@
-# Imagen oficial de Ubuntu 22.04 para ARM (Ampere A1)
+# Imagen oficial de Ubuntu 22.04 compatible con el shape elegido (ARM o x86)
 data "oci_core_images" "ubuntu" {
   compartment_id           = var.compartment_ocid
   operating_system         = "Canonical Ubuntu"
   operating_system_version = "22.04"
-  shape                    = "VM.Standard.A1.Flex"
+  shape                    = var.instance_shape
   sort_by                  = "TIMECREATED"
   sort_order               = "DESC"
 }
@@ -12,11 +12,16 @@ resource "oci_core_instance" "app" {
   compartment_id      = var.compartment_ocid
   availability_domain = data.oci_identity_availability_domains.ads.availability_domains[var.availability_domain_index].name
   display_name        = var.instance_name
-  shape               = "VM.Standard.A1.Flex"
+  shape               = var.instance_shape
 
-  shape_config {
-    ocpus         = var.ocpus
-    memory_in_gbs = var.memory_in_gbs
+  # ocpus/memoria solo aplican a los shapes Flex (p. ej. Ampere A1.Flex).
+  # Los shapes fijos como E2.1.Micro no llevan shape_config.
+  dynamic "shape_config" {
+    for_each = strcontains(var.instance_shape, "Flex") ? [1] : []
+    content {
+      ocpus         = var.ocpus
+      memory_in_gbs = var.memory_in_gbs
+    }
   }
 
   source_details {

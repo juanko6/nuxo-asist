@@ -47,16 +47,22 @@ variable "availability_domain_index" {
   description = "Índice del Availability Domain (0/1/2). Si da 'Out of host capacity', prueba otro."
 }
 
+variable "instance_shape" {
+  type        = string
+  default     = "VM.Standard.E2.1.Micro"
+  description = "Shape de la instancia. E2.1.Micro (x86, 1 GB, casi siempre disponible) o VM.Standard.A1.Flex (Ampere ARM, hasta 4/24, suele saturarse)."
+}
+
 variable "ocpus" {
   type        = number
   default     = 4
-  description = "OCPUs del Ampere A1 (4 = tope de la capa gratuita)"
+  description = "OCPUs (solo para shapes Flex como Ampere A1; ignorado en E2.1.Micro)"
 }
 
 variable "memory_in_gbs" {
   type        = number
   default     = 24
-  description = "RAM en GB (24 = tope de la capa gratuita)"
+  description = "RAM en GB (solo para shapes Flex; ignorado en E2.1.Micro)"
 }
 
 variable "boot_volume_size_in_gbs" {

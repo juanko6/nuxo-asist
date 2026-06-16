@@ -38,6 +38,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     smtpUser: '',
     smtpPass: '',
     smtpFrom: 'Test <test@asist.local>',
+    supportEmail: 'soporte@test.local',
     ...overrides,
   };
 }
@@ -52,7 +53,7 @@ export async function createTestApp(
 
 export async function resetDb(app: FastifyInstance): Promise<void> {
   await app.pg.query(
-    `TRUNCATE notifications, login_logs, attendance, schedule_templates, app_settings, users
+    `TRUNCATE notifications, login_logs, attendance, schedule_templates, app_settings, support_tickets, users
      RESTART IDENTITY CASCADE`
   );
 }

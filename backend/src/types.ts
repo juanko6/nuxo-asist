@@ -82,6 +82,18 @@ export interface EmployeeSchedule {
   created_at: Date;
 }
 
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  message: string;
+  created_by: string | null;
+  created_by_name: string;
+  created_by_email: string;
+  company_name: string | null;
+  status: 'open' | 'closed';
+  created_at: Date;
+}
+
 export type AbsenceType = 'vacation' | 'sick_leave' | 'leave' | 'other';
 
 export interface Absence {

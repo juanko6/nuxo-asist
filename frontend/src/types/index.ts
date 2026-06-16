@@ -181,6 +181,11 @@ export interface Settings {
   company_name: string | null;
 }
 
+export interface SupportTicketDTO {
+  subject: string;
+  message: string;
+}
+
 // HU-01: ausencias
 export type AbsenceType = 'vacation' | 'sick_leave' | 'leave' | 'other';
 

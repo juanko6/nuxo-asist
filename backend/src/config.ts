@@ -27,7 +27,8 @@ const EnvSchema = z.object({
   SMTP_SECURE: z.string().default('false').transform((v) => v.toLowerCase() === 'true'),
   SMTP_USER: z.string().default(''),
   SMTP_PASS: z.string().default(''),
-  SMTP_FROM: z.string().default('Control de Asistencia <no-reply@asist.local>'),
+  SMTP_FROM: z.string().default('nuxoasist <no-reply@nuxoasist.app>'),
+  SUPPORT_EMAIL: z.string().default('nuxoasist@gmail.com'),
   // Rate limiting (HU hardening)
   RATE_LIMIT_ENABLED: z.string().default('true').transform((v) => v.toLowerCase() !== 'false'),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
@@ -64,6 +65,7 @@ export interface AppConfig {
   smtpUser: string;
   smtpPass: string;
   smtpFrom: string;
+  supportEmail: string;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -104,5 +106,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     smtpUser: e.SMTP_USER,
     smtpPass: e.SMTP_PASS,
     smtpFrom: e.SMTP_FROM,
+    supportEmail: e.SUPPORT_EMAIL,
   };
 }

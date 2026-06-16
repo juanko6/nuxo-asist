@@ -43,12 +43,23 @@ export const useAuth = () => {
     setUser(null);
   }, []);
 
+  // Re-lee el usuario actual (p. ej. tras cambiar la contraseña en el primer acceso)
+  const refreshUser = useCallback(async (): Promise<void> => {
+    try {
+      setUser(await authService.me());
+    } catch {
+      authService.logout();
+      setUser(null);
+    }
+  }, []);
+
   return {
     user,
     loading,
     error,
     login,
     logout,
+    refreshUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
   };

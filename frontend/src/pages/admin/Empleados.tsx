@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, CalendarRange, UserX, RotateCcw } from 'lucide-react';
+import { Users, Plus, CalendarRange, UserX, RotateCcw, Upload } from 'lucide-react';
 import { employeesService } from '@/services/api/employees';
+import { ImportEmpleadosModal } from './ImportEmpleadosModal';
 import { schedulesService } from '@/services/api/schedules';
 import type { User, UserStatus, ScheduleTemplateSummary, EmployeeScheduleView } from '@/types';
 import { Card, Button, Badge, FullSpinner, EmptyState, PageHeader, Modal, Field, Input, Select, cn } from '@/components/ui';
@@ -15,6 +16,7 @@ export const AdminEmpleados: React.FC = () => {
   const [employees, setEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<User | null>(null);
 
   const load = useCallback(async () => {
@@ -60,7 +62,16 @@ export const AdminEmpleados: React.FC = () => {
       <PageHeader
         title="Empleados"
         subtitle={tab === 'active' ? `${employees.length} en plantilla` : `${employees.length} de baja`}
-        actions={<Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4" /> Nuevo</Button>}
+        actions={
+          <>
+            <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}>
+              <Upload className="w-4 h-4" /> Importar
+            </Button>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="w-4 h-4" /> Nuevo
+            </Button>
+          </>
+        }
       />
 
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-4 w-fit">
@@ -129,6 +140,11 @@ export const AdminEmpleados: React.FC = () => {
         </div>
       )}
 
+      <ImportEmpleadosModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={async () => { setTab('active'); await load(); }}
+      />
       <CreateEmployeeModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}

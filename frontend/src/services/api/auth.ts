@@ -17,6 +17,13 @@ export const authService = {
     return api.get<User>('/auth/me');
   },
 
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await api.post('/me/password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+  },
+
   logout(): void {
     tokenStorage.clear();
   },

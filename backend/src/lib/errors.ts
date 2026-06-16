@@ -31,3 +31,5 @@ export const notFound = (message = 'Recurso no encontrado') =>
   new AppError(404, 'NOT_FOUND', message);
 
 export const conflict = (message: string) => new AppError(409, 'CONFLICT', message);
+
+export const badRequest = (message: string) => new AppError(400, 'VALIDATION_ERROR', message);

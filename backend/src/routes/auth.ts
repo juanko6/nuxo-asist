@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { forbidden, invalidCredentials } from '../lib/errors.js';
+import { badRequest, forbidden, invalidCredentials } from '../lib/errors.js';
 import type { SafeUser } from '../types.js';
 
 const LoginSchema = z.object({
@@ -33,7 +33,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const { email, password } = LoginSchema.parse(request.body);
 
     const { rows } = await app.pg.query<UserWithHash>(
-      `SELECT id, email, name, role, department, position, status, archived_at, created_at, password_hash
+      `SELECT id, email, name, role, department, position, status, archived_at, must_change_password, created_at, password_hash
        FROM users
        WHERE lower(email) = lower($1)`,
       [email]
@@ -63,5 +63,32 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   app.get('/auth/me', { preHandler: [app.authenticate] }, async (request) => {
     return request.currentUser;
+  });
+
+  // Cambio de contraseña del propio usuario (también limpia must_change_password,
+  // usado en el primer acceso de un empleado importado).
+  const ChangePasswordSchema = z.object({
+    current_password: z.string().min(1),
+    new_password: z.string().min(8).max(100),
+  });
+
+  app.post('/me/password', { preHandler: [app.authenticate] }, async (request) => {
+    const { current_password, new_password } = ChangePasswordSchema.parse(request.body);
+
+    const { rows } = await app.pg.query<{ password_hash: string }>(
+      'SELECT password_hash FROM users WHERE id = $1',
+      [request.currentUser.id]
+    );
+    const ok = await bcrypt.compare(current_password, rows[0]!.password_hash);
+    if (!ok) {
+      throw badRequest('La contraseña actual no es correcta');
+    }
+
+    const hash = await bcrypt.hash(new_password, app.config.bcryptRounds);
+    await app.pg.query(
+      'UPDATE users SET password_hash = $2, must_change_password = false WHERE id = $1',
+      [request.currentUser.id, hash]
+    );
+    return { ok: true };
   });
 };

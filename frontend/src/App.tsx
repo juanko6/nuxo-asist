@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { FullSpinner } from '@/components/ui';
 import { setupService } from '@/services/api/setup';
 import { SetupWizard } from '@/pages/Setup';
+import { ChangePasswordRequired } from '@/pages/ChangePassword';
 import { LoginPage } from '@/pages/Login';
 import { FichajePage } from '@/pages/employee/Fichaje';
 import { HistorialPage } from '@/pages/employee/Historial';
@@ -18,7 +19,7 @@ import { AdminLogs } from '@/pages/admin/Logs';
 import { AdminAjustes } from '@/pages/admin/Ajustes';
 
 const App: React.FC = () => {
-  const { isAuthenticated, isAdmin, loading } = useAuthContext();
+  const { isAuthenticated, isAdmin, loading, user } = useAuthContext();
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -38,6 +39,11 @@ const App: React.FC = () => {
 
   if (needsSetup) {
     return <SetupWizard onComplete={() => setNeedsSetup(false)} />;
+  }
+
+  // Primer acceso de un empleado: debe cambiar la contraseña temporal
+  if (isAuthenticated && user?.must_change_password) {
+    return <ChangePasswordRequired />;
   }
 
   const adminRoute = (el: React.ReactNode) =>

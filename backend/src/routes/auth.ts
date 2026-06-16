@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { invalidCredentials } from '../lib/errors.js';
+import { forbidden, invalidCredentials } from '../lib/errors.js';
 import type { SafeUser } from '../types.js';
 
 const LoginSchema = z.object({
@@ -33,7 +33,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const { email, password } = LoginSchema.parse(request.body);
 
     const { rows } = await app.pg.query<UserWithHash>(
-      `SELECT id, email, name, role, department, position, created_at, password_hash
+      `SELECT id, email, name, role, department, position, status, archived_at, created_at, password_hash
        FROM users
        WHERE lower(email) = lower($1)`,
       [email]
@@ -43,6 +43,9 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const passwordOk = await bcrypt.compare(password, row?.password_hash ?? DUMMY_HASH);
     if (!row || !passwordOk) {
       throw invalidCredentials();
+    }
+    if (row.status === 'inactive') {
+      throw forbidden('Tu cuenta está dada de baja. Contacta con tu responsable.');
     }
 
     const { password_hash: _hash, ...user } = row;

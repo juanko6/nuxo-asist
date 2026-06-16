@@ -1,8 +1,9 @@
 import { api } from './client';
-import type { User, CreateUserDTO, UpdateUserDTO } from '@/types';
+import type { User, UserStatus, CreateUserDTO, UpdateUserDTO } from '@/types';
 
 export const employeesService = {
-  getAll: (): Promise<User[]> => api.get<User[]>('/employees'),
+  getAll: (status?: UserStatus | 'all'): Promise<User[]> =>
+    api.get<User[]>(`/employees${status ? `?status=${status}` : ''}`),
 
   getById: (id: string): Promise<User> => api.get<User>(`/employees/${id}`),
 
@@ -12,5 +13,7 @@ export const employeesService = {
   update: (id: string, updates: UpdateUserDTO): Promise<User> =>
     api.patch<User>(`/employees/${id}`, updates),
 
-  delete: (id: string): Promise<void> => api.delete<void>(`/employees/${id}`),
+  archive: (id: string): Promise<User> => api.post<User>(`/employees/${id}/archive`),
+
+  restore: (id: string): Promise<User> => api.post<User>(`/employees/${id}/restore`),
 };

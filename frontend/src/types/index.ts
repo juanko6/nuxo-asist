@@ -1,4 +1,6 @@
 // User Types
+export type UserStatus = 'active' | 'inactive';
+
 export interface User {
   id: string;
   email: string;
@@ -6,6 +8,8 @@ export interface User {
   role: 'employee' | 'admin';
   department: string;
   position: string;
+  status?: UserStatus;
+  archived_at?: string | null;
   created_at?: string;
 }
 

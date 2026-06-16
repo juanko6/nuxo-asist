@@ -4,6 +4,8 @@ import type { AppConfig } from './config.js';
 export type Role = 'employee' | 'admin';
 
 /** Usuario sin credenciales: lo único que sale del backend. */
+export type UserStatus = 'active' | 'inactive';
+
 export interface SafeUser {
   id: string;
   email: string;
@@ -11,6 +13,8 @@ export interface SafeUser {
   role: Role;
   department: string;
   position: string;
+  status: UserStatus;
+  archived_at: Date | null;
   created_at: Date;
 }
 

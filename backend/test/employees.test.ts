@@ -265,36 +265,66 @@ describe('Employees', () => {
     });
   });
 
-  describe('DELETE /api/v1/employees/:id', () => {
-    it('admin elimina un empleado', async () => {
-      const res = await app.inject({
-        method: 'DELETE',
-        url: `/api/v1/employees/${employeeId}`,
-        headers: auth(adminToken),
-      });
-      expect(res.statusCode).toBe(204);
+  describe('Baja y reactivación de empleados', () => {
+    const archive = (id: string, token: string) =>
+      app.inject({ method: 'POST', url: `/api/v1/employees/${id}/archive`, headers: auth(token) });
 
-      const { rows } = await app.pg.query('SELECT id FROM users WHERE id = $1', [
-        employeeId,
-      ]);
-      expect(rows).toHaveLength(0);
+    it('admin da de baja a un empleado: no se borra, pasa a inactive', async () => {
+      const res = await archive(employeeId, adminToken);
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('inactive');
+
+      const { rows } = await app.pg.query('SELECT status FROM users WHERE id = $1', [employeeId]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe('inactive');
     });
 
-    it('un empleado recibe 403', async () => {
+    it('un empleado de baja sale de la lista activa pero está en bajas', async () => {
+      await archive(employeeId, adminToken);
+
+      const active = (
+        await app.inject({ method: 'GET', url: '/api/v1/employees', headers: auth(adminToken) })
+      ).json();
+      expect(active.some((e: { id: string }) => e.id === employeeId)).toBe(false);
+
+      const inactive = (
+        await app.inject({
+          method: 'GET',
+          url: '/api/v1/employees?status=inactive',
+          headers: auth(adminToken),
+        })
+      ).json();
+      expect(inactive.some((e: { id: string }) => e.id === employeeId)).toBe(true);
+    });
+
+    it('un empleado de baja no puede iniciar sesión (403)', async () => {
+      await archive(employeeId, adminToken);
       const res = await app.inject({
-        method: 'DELETE',
-        url: `/api/v1/employees/${employeeId}`,
-        headers: auth(employeeToken),
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'ana@empresa.com', password: 'clave-segura-123' },
       });
       expect(res.statusCode).toBe(403);
     });
 
-    it('devuelve 404 con id inexistente', async () => {
+    it('admin reactiva a un empleado de baja', async () => {
+      await archive(employeeId, adminToken);
       const res = await app.inject({
-        method: 'DELETE',
-        url: '/api/v1/employees/00000000-0000-0000-0000-000000000000',
+        method: 'POST',
+        url: `/api/v1/employees/${employeeId}/restore`,
         headers: auth(adminToken),
       });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().status).toBe('active');
+    });
+
+    it('un empleado no puede dar de baja (403)', async () => {
+      const res = await archive(employeeId, employeeToken);
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('404 con id inexistente', async () => {
+      const res = await archive('00000000-0000-0000-0000-000000000000', adminToken);
       expect(res.statusCode).toBe(404);
     });
   });

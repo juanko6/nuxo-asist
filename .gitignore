@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Variables de entorno (usa .env.example como plantilla)
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +25,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local
+.claude/scheduled_tasks.lock
+
+# Terraform (estado y variables con secretos; el .lock.hcl sí se versiona)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+**/terraform.tfvars
+crash.log
+crash.*.log

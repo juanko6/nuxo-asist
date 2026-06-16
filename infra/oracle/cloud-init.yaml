@@ -1,0 +1,32 @@
+#cloud-config
+# Prepara la instancia: Docker + el repo y un .env listos para desplegar.
+# NO arranca la app (el despliegue es manual: ver infra/oracle/README.md).
+package_update: true
+packages:
+  - git
+  - curl
+  - ca-certificates
+  - openssl
+
+runcmd:
+  # Docker (script oficial, compatible ARM64) + plugin compose
+  - curl -fsSL https://get.docker.com | sh
+  - usermod -aG docker ubuntu
+  - systemctl enable --now docker
+
+  # Abrir 80/443 en el firewall local: las imágenes Ubuntu de OCI traen iptables
+  # que DROPea todo salvo SSH, aunque la security list de la red lo permita.
+  - iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+  - iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+  - netfilter-persistent save
+
+  # Código y configuración listos para desplegar
+  - git clone -b develop https://github.com/juanko6/asist_employed.git /opt/asist
+  - cp /opt/asist/.env.example /opt/asist/.env
+  - sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" /opt/asist/.env
+  - sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$(openssl rand -hex 16)|" /opt/asist/.env
+  - sed -i "s|^WEB_PORT=.*|WEB_PORT=80|" /opt/asist/.env
+  - chown -R ubuntu:ubuntu /opt/asist
+  - touch /opt/asist/PREPARADO
+
+final_message: "Instancia preparada. Despliega con: cd /opt/asist && docker compose up -d --build"

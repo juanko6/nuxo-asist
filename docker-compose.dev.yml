@@ -1,0 +1,34 @@
+# Proyecto aislado del stack de producción (docker-compose.yml)
+name: asist_employed_dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: asist_db_dev
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: asist
+      POSTGRES_PASSWORD: asist
+      POSTGRES_DB: asist
+    volumes:
+      - asist_db_dev:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asist -d asist"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Bandeja de correo de prueba para el envío de emails (HU-01) en desarrollo.
+  # SMTP en :1025, interfaz web en http://localhost:8025.
+  # Arranca el API con EMAIL_ENABLED=true SMTP_HOST=localhost SMTP_PORT=1025.
+  mail:
+    image: axllent/mailpit:latest
+    container_name: asist_mail_dev
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  asist_db_dev:

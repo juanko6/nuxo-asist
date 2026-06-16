@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.env
+**/.env
+*.txt
+.claude
+coverage
+Dockerfile
+**/Dockerfile
+docker-compose*.yml

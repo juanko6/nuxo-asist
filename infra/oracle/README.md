@@ -55,13 +55,17 @@ Espera ~2-3 min a que `cloud-init` termine (deja el fichero `/opt/asist/PREPARAD
 ssh ubuntu@<public_ip>
 cd /opt/asist
 docker compose up -d --build                       # construye y levanta db + api + web
-docker compose --profile tools run --rm seed       # usuarios iniciales (solo la 1ª vez)
 docker compose ps                                  # comprueba que están 'healthy'
 ```
 
-La app queda en **http://<public_ip>** (login `admin@empresa.com` / `cambiar-admin-123`).
-**Cambia la contraseña del admin** tras el primer acceso (o define `SEED_ADMIN_PASSWORD`
-en `/opt/asist/.env` antes del seed).
+La app queda en **http://<public_ip>**. La primera vez muestra el **asistente de
+configuración**: el cliente crea ahí el nombre de su empresa y su cuenta de
+administrador (no hay usuarios de prueba en producción). A partir de ese momento,
+el acceso es por login normal y el admin da de alta a sus empleados.
+
+> Solo para una demo con datos de ejemplo (admin + empleados ficticios) puedes
+> ejecutar `docker compose --profile tools run --rm seed`. En un despliegue real
+> **no lo hagas**: deja que el cliente use el asistente.
 
 ## 4. (Más adelante) HTTPS con dominio
 

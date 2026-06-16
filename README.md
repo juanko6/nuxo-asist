@@ -124,6 +124,9 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 
 | Método | Ruta | Quién | Descripción |
 | --- | --- | --- | --- |
+| GET | `/api/v1/setup/status` | público | ¿Necesita configuración inicial? + nombre de empresa |
+| POST | `/api/v1/setup` | público (1 vez) | Onboarding: crea empresa y administrador |
+| GET/PUT | `/api/v1/settings` | público / admin | Nombre de empresa (branding) / editarlo |
 | POST | `/api/v1/auth/login` | público | Login → JWT |
 | GET | `/api/v1/auth/me` | autenticado | Usuario actual |
 | GET/POST | `/api/v1/employees` | admin | Listar / crear empleados |
@@ -229,6 +232,10 @@ GitHub Actions en [`.github/workflows/`](.github/workflows):
 
   Usa caché de pnpm y de capas Docker (GHA) para acelerar; cancela ejecuciones obsoletas de la misma rama.
 - **`release.yml`** — al crear un tag `vX.Y.Z`, construye y publica las imágenes de producción en GHCR (`ghcr.io/sefogi/asist_employed-api` y `-web`). El despliegue automático en un servidor se añadirá cuando exista uno.
+
+## Configuración inicial (onboarding)
+
+La primera vez que se abre un despliegue nuevo (sin administrador), la app muestra un **asistente** campo a campo donde se crea el **nombre de la empresa** y la **cuenta de administrador**. No se siembran usuarios de prueba en producción. El nombre de empresa se usa como **marca** (login y cabecera) y se edita después en **Ajustes**. Single-tenant: una instancia por empresa.
 
 ## Seguridad
 

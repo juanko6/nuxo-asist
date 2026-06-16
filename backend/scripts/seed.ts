@@ -69,6 +69,12 @@ try {
     );
     console.log(`+ ${user.email} creado (${user.role})`);
   }
+  // Nombre de empresa por defecto (en producción se fija en el onboarding inicial)
+  await pool.query(
+    `INSERT INTO app_settings (id, company_name) VALUES (1, $1)
+     ON CONFLICT (id) DO NOTHING`,
+    [process.env.SEED_COMPANY_NAME ?? 'Empresa Demo']
+  );
   console.log('Seed completado.');
 } finally {
   await pool.end();

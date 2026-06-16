@@ -2,9 +2,10 @@ import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
   Clock, History, LayoutDashboard, Users, CalendarRange, CalendarOff,
-  CheckSquare, FileText, LogIn as LogInIcon, LogOut, Fingerprint,
+  CheckSquare, FileText, LogIn as LogInIcon, LogOut, Fingerprint, Settings as SettingsIcon,
 } from 'lucide-react';
 import { useAuthContext } from '@/context/auth';
+import { useSettings } from '@/context/settings';
 import { cn } from '@/components/ui';
 
 interface NavItem {
@@ -26,10 +27,12 @@ const ADMIN_NAV: NavItem[] = [
   { to: '/admin/validaciones', label: 'Validaciones', icon: <CheckSquare className="w-4 h-4" /> },
   { to: '/admin/registros', label: 'Registros', icon: <FileText className="w-4 h-4" /> },
   { to: '/admin/logs', label: 'Accesos', icon: <LogInIcon className="w-4 h-4" /> },
+  { to: '/admin/ajustes', label: 'Ajustes', icon: <SettingsIcon className="w-4 h-4" /> },
 ];
 
 export const AppLayout: React.FC = () => {
   const { user, isAdmin, logout } = useAuthContext();
+  const { companyName } = useSettings();
   const nav = isAdmin ? ADMIN_NAV : EMPLOYEE_NAV;
 
   return (
@@ -41,7 +44,7 @@ export const AppLayout: React.FC = () => {
               <div className="grid place-items-center w-9 h-9 rounded-xl bg-brand-600 text-white">
                 <Fingerprint className="w-5 h-5" />
               </div>
-              <span className="font-bold text-slate-900">Fichaje</span>
+              <span className="font-bold text-slate-900 truncate max-w-[160px]">{companyName ?? 'Fichaje'}</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="text-right leading-tight hidden sm:block">

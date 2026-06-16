@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Fingerprint } from 'lucide-react';
 import { useAuthContext } from '@/context/auth';
+import { useSettings } from '@/context/settings';
 import { Button, Card, Field, Input } from '@/components/ui';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuthContext();
+  const { companyName } = useSettings();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,7 +31,7 @@ export const LoginPage: React.FC = () => {
           <div className="grid place-items-center w-14 h-14 rounded-2xl bg-brand-600 text-white shadow-lg mb-3">
             <Fingerprint className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Control de Asistencia</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{companyName ?? 'Control de Asistencia'}</h1>
           <p className="text-sm text-slate-500 mt-1">Inicia sesión para fichar</p>
         </div>
 

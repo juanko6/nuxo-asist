@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthContext } from '@/context/auth';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { FullSpinner } from '@/components/ui';
+import { setupService } from '@/services/api/setup';
+import { SetupWizard } from '@/pages/Setup';
 import { LoginPage } from '@/pages/Login';
 import { FichajePage } from '@/pages/employee/Fichaje';
 import { HistorialPage } from '@/pages/employee/Historial';
@@ -13,16 +15,29 @@ import { AdminAusencias } from '@/pages/admin/Ausencias';
 import { AdminValidaciones } from '@/pages/admin/Validaciones';
 import { AdminRegistros } from '@/pages/admin/Registros';
 import { AdminLogs } from '@/pages/admin/Logs';
+import { AdminAjustes } from '@/pages/admin/Ajustes';
 
 const App: React.FC = () => {
   const { isAuthenticated, isAdmin, loading } = useAuthContext();
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
-  if (loading) {
+  useEffect(() => {
+    setupService
+      .status()
+      .then((s) => setNeedsSetup(s.needs_setup))
+      .catch(() => setNeedsSetup(false));
+  }, []);
+
+  if (loading || needsSetup === null) {
     return (
       <div className="min-h-screen grid place-items-center">
         <FullSpinner label="Cargando…" />
       </div>
     );
+  }
+
+  if (needsSetup) {
+    return <SetupWizard onComplete={() => setNeedsSetup(false)} />;
   }
 
   const adminRoute = (el: React.ReactNode) =>
@@ -45,6 +60,7 @@ const App: React.FC = () => {
         <Route path="/admin/validaciones" element={adminRoute(<AdminValidaciones />)} />
         <Route path="/admin/registros" element={adminRoute(<AdminRegistros />)} />
         <Route path="/admin/logs" element={adminRoute(<AdminLogs />)} />
+        <Route path="/admin/ajustes" element={adminRoute(<AdminAjustes />)} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

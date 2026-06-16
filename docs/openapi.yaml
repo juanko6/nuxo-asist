@@ -23,6 +23,8 @@ tags:
     description: Fichaje de entrada/salida y horas extra
   - name: schedules
     description: Plantillas de horario y asignación por empleado (solo admin)
+  - name: system
+    description: Configuración inicial (onboarding) y ajustes de la instancia
   - name: absences
     description: Ausencias (vacaciones, bajas, permisos)
   - name: notifications
@@ -785,6 +787,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /setup/status:
+    get:
+      tags: [system]
+      summary: Estado del arranque inicial
+      description: Indica si la instancia necesita configuración (no hay admin) y el nombre de empresa.
+      operationId: getSetupStatus
+      responses:
+        '200':
+          description: Estado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [needs_setup, company_name]
+                properties:
+                  needs_setup:
+                    type: boolean
+                  company_name:
+                    type: ['string', 'null']
+
+  /setup:
+    post:
+      tags: [system]
+      summary: Configuración inicial (crea empresa y administrador)
+      description: Público pero válido una sola vez. Tras esto, el acceso es por login normal.
+      operationId: runSetup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [company_name, admin_name, admin_email, admin_password]
+              properties:
+                company_name:
+                  type: string
+                  minLength: 2
+                  maxLength: 60
+                admin_name:
+                  type: string
+                admin_email:
+                  type: string
+                  format: email
+                admin_password:
+                  type: string
+                  minLength: 8
+      responses:
+        '201':
+          description: Empresa y administrador creados
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: El sistema ya está configurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /settings:
+    get:
+      tags: [system]
+      summary: Ajustes públicos (branding)
+      operationId: getSettings
+      responses:
+        '200':
+          description: Ajustes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [company_name]
+                properties:
+                  company_name:
+                    type: ['string', 'null']
+    put:
+      tags: [system]
+      summary: Editar el nombre de empresa
+      description: Solo admin.
+      operationId: updateSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [company_name]
+              properties:
+                company_name:
+                  type: string
+                  minLength: 2
+                  maxLength: 60
+      responses:
+        '200':
+          description: Ajustes actualizados
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /absences:
     get:

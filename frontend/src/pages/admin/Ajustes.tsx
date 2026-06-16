@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Save, MapPin, Crosshair } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Save, MapPin, Crosshair, Monitor } from 'lucide-react';
 import { settingsService } from '@/services/api/setup';
 import { useSettings } from '@/context/settings';
 import { useToast } from '@/context/toast';
@@ -126,6 +127,23 @@ export const AdminAjustes: React.FC = () => {
             </Button>
           </>
         )}
+      </Card>
+
+      <Card className="p-5 max-w-md space-y-2">
+        <p className="font-semibold text-slate-800 flex items-center gap-2">
+          <Monitor className="w-4 h-4 text-brand-600" /> Modo kiosco
+        </p>
+        <p className="text-sm text-slate-500">
+          En el dispositivo compartido (p. ej. una tablet en la entrada), abre el modo kiosco y
+          actívalo desde esta misma sesión. Los empleados ficharán con su PIN o QR (configúralos en
+          cada empleado).
+        </p>
+        <Link
+          to="/kiosk"
+          className="inline-flex items-center gap-2 text-sm font-medium text-brand-600 hover:underline"
+        >
+          <Monitor className="w-4 h-4" /> Abrir modo kiosco
+        </Link>
       </Card>
 
       <Button loading={saving} disabled={form.company_name.trim().length < 2} onClick={save}>

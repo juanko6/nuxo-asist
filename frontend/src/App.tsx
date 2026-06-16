@@ -6,6 +6,7 @@ import { FullSpinner } from '@/components/ui';
 import { setupService } from '@/services/api/setup';
 import { SetupWizard } from '@/pages/Setup';
 import { ChangePasswordRequired } from '@/pages/ChangePassword';
+import { KioskPage } from '@/pages/Kiosk';
 import { LoginPage } from '@/pages/Login';
 import { FichajePage } from '@/pages/employee/Fichaje';
 import { HistorialPage } from '@/pages/employee/Historial';
@@ -51,6 +52,7 @@ const App: React.FC = () => {
 
   return (
     <Routes>
+      <Route path="/kiosk" element={<KioskPage />} />
       <Route
         path="/login"
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}

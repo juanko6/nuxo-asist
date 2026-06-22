@@ -139,7 +139,7 @@ Edge cases:
 Implicaciones técnicas:
 - **Módulo nuevo de ausencias** (tabla `absences`: vacaciones, baja médica, permiso) — requisito
   implícito de esta HU, hoy no existe.
-- Servicio de email (nodemailer + SMTP configurable por env; en dev, Mailpit en docker-compose).
+- Servicio de email (nodemailer + SMTP configurable por env; en dev, levanta Mailpit con `docker run -d --name mailpit -p 8025:8025 -p 1025:1025 axllent/mailpit`).
 - Dashboard admin con alertas rojo/naranja para ausencias pendientes de justificar.
 
 ## HU-06 — Confirmación de acciones para prevención de errores

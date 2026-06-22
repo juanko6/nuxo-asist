@@ -6,7 +6,6 @@ RUN corepack enable
 WORKDIR /app
 
 # Dependencias completas (incluye dev) para compilar TypeScript.
-# Esta etapa también sirve para el servicio puntual de seed (target: build).
 FROM base AS build
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY backend/package.json backend/

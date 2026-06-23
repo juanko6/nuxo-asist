@@ -96,7 +96,7 @@ cp .env.example .env       # edita POSTGRES_PASSWORD y, sobre todo, JWT_SECRET
 docker compose up -d --build
 ```
 
-La aplicación queda en **http://localhost:8080** (cambia el puerto con `WEB_PORT` en el `.env`). nginx sirve la SPA y proxyea `/api` al backend, así que **todo va por el mismo origen y no hay CORS** en producción.
+La aplicación queda en **http://localhost:3000** (cambia el puerto con `WEB_PORT` en el `.env`). La API también se publica en **http://localhost:8000** (`API_PORT`) para acceso directo. nginx sirve la SPA y proxyea `/api` al backend, así que **todo va por el mismo origen y no hay CORS** en producción.
 
 Detalles del stack:
 

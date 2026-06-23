@@ -28,11 +28,15 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     restart: unless-stopped
+    ports:
+      # Puerto del host para acceder a la API directamente (quitar en producción
+      # real: el frontend ya la proxyea por el mismo origen vía nginx)
+      - "${API_PORT:-8000}:3000"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET:?definir en .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
       APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Madrid}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -72,7 +76,7 @@ services:
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "${WEB_PORT:-3000}:80"
     depends_on:
       api:
         condition: service_healthy

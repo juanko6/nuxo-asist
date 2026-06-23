@@ -15,6 +15,7 @@ import { AdminEmpleados } from '@/pages/admin/Empleados';
 import { AdminHorarios } from '@/pages/admin/Horarios';
 import { AdminAusencias } from '@/pages/admin/Ausencias';
 import { AdminValidaciones } from '@/pages/admin/Validaciones';
+import { AdminNotificaciones } from '@/pages/admin/Notificaciones';
 import { AdminRegistros } from '@/pages/admin/Registros';
 import { AdminLogs } from '@/pages/admin/Logs';
 import { AdminAjustes } from '@/pages/admin/Ajustes';
@@ -66,6 +67,7 @@ const App: React.FC = () => {
         <Route path="/admin/horarios" element={adminRoute(<AdminHorarios />)} />
         <Route path="/admin/ausencias" element={adminRoute(<AdminAusencias />)} />
         <Route path="/admin/validaciones" element={adminRoute(<AdminValidaciones />)} />
+        <Route path="/admin/notificaciones" element={adminRoute(<AdminNotificaciones />)} />
         <Route path="/admin/registros" element={adminRoute(<AdminRegistros />)} />
         <Route path="/admin/logs" element={adminRoute(<AdminLogs />)} />
         <Route path="/admin/ajustes" element={adminRoute(<AdminAjustes />)} />

@@ -5,6 +5,7 @@ import { employeesService } from '@/services/api/employees';
 import type { Absence, AbsenceType, User } from '@/types';
 import { Card, Button, Badge, FullSpinner, EmptyState, PageHeader, Modal, Field, Input, Select } from '@/components/ui';
 import { useToast } from '@/context/toast';
+import { useConfirm } from '@/context/confirm';
 import { formatDate, ABSENCE_LABELS } from '@/lib/format';
 
 const TYPE_TONES: Record<AbsenceType, 'green' | 'red' | 'blue' | 'slate'> = {
@@ -13,6 +14,7 @@ const TYPE_TONES: Record<AbsenceType, 'green' | 'red' | 'blue' | 'slate'> = {
 
 export const AdminAusencias: React.FC = () => {
   const toast = useToast();
+  const confirm = useConfirm();
   const [absences, setAbsences] = useState<Absence[]>([]);
   const [employees, setEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +34,16 @@ export const AdminAusencias: React.FC = () => {
 
   const nameOf = (id: string) => employees.find((e) => e.id === id)?.name ?? '—';
 
-  const remove = async (id: string) => {
+  const remove = async (a: Absence) => {
+    const ok = await confirm({
+      title: 'Eliminar ausencia',
+      message: `¿Eliminar la ausencia de ${nameOf(a.employee_id)} (${ABSENCE_LABELS[a.type]}, ${formatDate(a.start_date)} → ${formatDate(a.end_date)})? Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
-      await absencesService.delete(id);
+      await absencesService.delete(a.id);
       toast.success('Ausencia eliminada');
       await load();
     } catch (e) {
@@ -65,7 +74,7 @@ export const AdminAusencias: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Badge tone={TYPE_TONES[a.type]}>{ABSENCE_LABELS[a.type]}</Badge>
-                <button onClick={() => remove(a.id)} className="text-slate-300 hover:text-rose-500 p-1">
+                <button onClick={() => remove(a)} className="text-slate-300 hover:text-rose-500 p-1">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

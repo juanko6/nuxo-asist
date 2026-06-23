@@ -2,11 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   Activity, LogIn, LogOut, Clock, CalendarOff, MapPinOff, FileEdit,
-  History, Building2, ChevronRight,
+  History, Building2, ChevronRight, Bell,
 } from 'lucide-react';
-import type { User, Absence, LoginLog } from '@/types';
+import type { User, Absence, LoginLog, Notification } from '@/types';
 import { Card, Badge, cn } from '@/components/ui';
 import { ABSENCE_LABELS, formatTime, formatDate } from '@/lib/format';
+import { NOTIF_META } from './notifMeta';
 
 /* ────────────────────────── Contenedor común ────────────────────────── */
 
@@ -292,3 +293,45 @@ export const DepartmentsWidget: React.FC<{ counts: { name: string; count: number
     </WidgetCard>
   );
 };
+
+/* ───────────────── Notificaciones (preview con enlace) ───────────────── */
+
+export const NotificationsWidget: React.FC<{ notifications: Notification[] }> = ({
+  notifications,
+}) => (
+  <WidgetCard
+    title="Notificaciones"
+    icon={<Bell className="w-4 h-4 text-brand-500" />}
+    action={
+      <Link to="/admin/notificaciones" className="text-sm text-brand-600 flex items-center shrink-0">
+        Ver todas <ChevronRight className="w-4 h-4" />
+      </Link>
+    }
+  >
+    {notifications.length === 0 ? (
+      <div className="flex flex-col items-center py-6 text-slate-400 gap-2">
+        <Bell className="w-7 h-7 opacity-30" />
+        <p className="text-sm">Todo al día, no hay notificaciones pendientes</p>
+      </div>
+    ) : (
+      <ul className="divide-y divide-slate-100">
+        {notifications.slice(0, 5).map((n) => {
+          const meta = NOTIF_META[n.type] ?? NOTIF_META.info;
+          return (
+            <li key={n.id} className="flex items-start gap-3 py-2.5">
+              <span className={cn('mt-0.5 shrink-0 w-7 h-7 rounded-lg grid place-items-center', meta.color)}>
+                {meta.icon}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-700 leading-snug truncate">
+                  <span className="font-semibold">{n.employee_name}</span> — {n.message}
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">{meta.label}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    )}
+  </WidgetCard>
+);

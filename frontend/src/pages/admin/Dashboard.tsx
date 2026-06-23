@@ -1,21 +1,17 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Users, LogIn, CheckSquare, Bell, AlertTriangle, ChevronRight,
-  Clock, CalendarOff, Info, X, ThumbsUp,
-} from 'lucide-react';
+import { Users, LogIn, CheckSquare, Bell, AlertTriangle, ChevronRight } from 'lucide-react';
 import { employeesService } from '@/services/api/employees';
 import { attendanceService } from '@/services/api/attendance';
 import { notificationsService } from '@/services/api/notifications';
 import { absencesService } from '@/services/api/absences';
 import { loginLogsService } from '@/services/api/loginLogs';
 import type { AttendanceRecord, Notification, User, Absence, LoginLog } from '@/types';
-import { Card, FullSpinner, PageHeader } from '@/components/ui';
-import { useToast } from '@/context/toast';
+import { FullSpinner, PageHeader } from '@/components/ui';
 import { formatDate, formatTime } from '@/lib/format';
 import {
   StatTiles, PresenceWidget, TodayPunchesWidget, AbsencesWidget, FlagsWidget,
-  RecentLoginsWidget, DepartmentsWidget, WidgetCard,
+  RecentLoginsWidget, DepartmentsWidget, NotificationsWidget, WidgetCard,
   type StatTile, type PunchEvent, type AbsenceItem,
 } from '@/components/dashboard/widgets';
 
@@ -23,27 +19,13 @@ import {
 const pad = (n: number) => String(n).padStart(2, '0');
 const localDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-// ── Notificaciones: metadatos por tipo ───────────────────────────────────────
-const NOTIF_META: Record<
-  Notification['type'],
-  { label: string; icon: React.ReactNode; color: string }
-> = {
-  overtime_request: { label: 'Solicitud de horas extra', icon: <Clock className="w-4 h-4" />, color: 'text-amber-600 bg-amber-50' },
-  absence: { label: 'Ausencia sin justificar', icon: <CalendarOff className="w-4 h-4" />, color: 'text-rose-600 bg-rose-50' },
-  info: { label: 'Aviso del sistema', icon: <Info className="w-4 h-4" />, color: 'text-slate-500 bg-slate-100' },
-  approval: { label: 'Aprobación', icon: <ThumbsUp className="w-4 h-4" />, color: 'text-brand-600 bg-brand-50' },
-};
-
 export const AdminDashboard: React.FC = () => {
-  const toast = useToast();
   const [employees, setEmployees] = useState<User[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [absences, setAbsences] = useState<Absence[]>([]);
   const [logins, setLogins] = useState<LoginLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dismissing, setDismissing] = useState<Set<string>>(new Set());
-  const [approving, setApproving] = useState<Set<string>>(new Set());
   const [nowMs] = useState(() => Date.now()); // instante de carga (estable durante el render)
 
   useEffect(() => {
@@ -63,32 +45,6 @@ export const AdminDashboard: React.FC = () => {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  const dismiss = useCallback(async (id: string) => {
-    setDismissing((s) => new Set(s).add(id));
-    try {
-      await notificationsService.delete(id);
-      setNotifications((prev) => prev.filter((n) => n.id !== id));
-    } catch {
-      toast.error('No se pudo descartar la notificación');
-    } finally {
-      setDismissing((s) => { const next = new Set(s); next.delete(id); return next; });
-    }
-  }, [toast]);
-
-  const approveOvertime = useCallback(async (notif: Notification) => {
-    if (!notif.attendance_id) return;
-    setApproving((s) => new Set(s).add(notif.id));
-    try {
-      await attendanceService.approveOvertime(notif.attendance_id);
-      toast.success('Horas extra aprobadas');
-      setNotifications((prev) => prev.filter((n) => n.id !== notif.id));
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'No se pudo aprobar');
-    } finally {
-      setApproving((s) => { const next = new Set(s); next.delete(notif.id); return next; });
-    }
-  }, [toast]);
 
   if (loading) return <FullSpinner label="Cargando panel…" />;
 
@@ -149,7 +105,7 @@ export const AdminDashboard: React.FC = () => {
     { label: 'Empleados', value: employees.length, icon: <Users className="w-5 h-5" />, to: '/admin/empleados', tone: 'brand' },
     { label: 'Dentro ahora', value: working, icon: <LogIn className="w-5 h-5" />, to: '/admin/registros', tone: working ? 'green' : 'slate' },
     { label: 'Pend. de validar', value: pending.length, icon: <CheckSquare className="w-5 h-5" />, to: '/admin/validaciones', tone: pending.length ? 'amber' : 'slate' },
-    { label: 'Notificaciones', value: unread.length, icon: <Bell className="w-5 h-5" />, to: '#notificaciones', tone: unread.length ? 'red' : 'slate' },
+    { label: 'Notificaciones', value: unread.length, icon: <Bell className="w-5 h-5" />, to: '/admin/notificaciones', tone: unread.length ? 'red' : 'slate' },
   ];
 
   return (
@@ -198,68 +154,7 @@ export const AdminDashboard: React.FC = () => {
         <DepartmentsWidget counts={departments} />
       </div>
 
-      {/* Notificaciones (interactivo) */}
-      <Card className="p-4" id="notificaciones">
-        <div className="flex items-center justify-between mb-3">
-          <p className="font-semibold text-slate-800 flex items-center gap-2">
-            <Bell className="w-4 h-4 text-brand-500" />
-            Notificaciones
-            {unread.length > 0 && (
-              <span className="ml-1 text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 font-bold leading-none">
-                {unread.length}
-              </span>
-            )}
-          </p>
-        </div>
-
-        {unread.length === 0 ? (
-          <div className="flex flex-col items-center py-8 text-slate-400 gap-2">
-            <Bell className="w-8 h-8 opacity-30" />
-            <p className="text-sm">Todo al día, no hay notificaciones pendientes</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {unread.map((n) => {
-              const meta = NOTIF_META[n.type] ?? NOTIF_META.info;
-              const isDismissing = dismissing.has(n.id);
-              const isApproving = approving.has(n.id);
-              return (
-                <li key={n.id} className="flex items-start gap-3 py-3">
-                  <span className={`mt-0.5 shrink-0 w-7 h-7 rounded-lg grid place-items-center ${meta.color}`}>
-                    {meta.icon}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-slate-400 mb-0.5">{meta.label}</p>
-                    <p className="text-sm text-slate-700 leading-snug">
-                      <span className="font-semibold">{n.employee_name}</span>{' — '}{n.message}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-0.5">{formatDate(n.timestamp)} · {formatTime(n.timestamp)}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-                    {n.type === 'overtime_request' && n.attendance_id && (
-                      <button
-                        onClick={() => approveOvertime(n)}
-                        disabled={isApproving || isDismissing}
-                        className="text-xs font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 px-2.5 py-1 rounded-lg transition disabled:opacity-50"
-                      >
-                        {isApproving ? '…' : 'Aprobar'}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => dismiss(n.id)}
-                      disabled={isDismissing || isApproving}
-                      title="Descartar"
-                      className="w-6 h-6 rounded-md grid place-items-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition disabled:opacity-50"
-                    >
-                      {isDismissing ? <span className="text-[10px]">…</span> : <X className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
+      <NotificationsWidget notifications={unread} />
     </div>
   );
 };

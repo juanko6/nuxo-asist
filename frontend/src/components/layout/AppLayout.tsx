@@ -3,12 +3,12 @@ import { NavLink, Outlet, Link } from 'react-router-dom';
 import {
   Clock, History, LayoutDashboard, Users, CalendarRange, CalendarOff,
   CheckSquare, FileText, LogIn as LogInIcon, LogOut, Fingerprint,
-  Settings as SettingsIcon, ChevronLeft, ChevronRight,
+  Settings as SettingsIcon, ChevronLeft, ChevronRight, Bell,
 } from 'lucide-react';
 import { useAuthContext } from '@/context/auth';
 import { useSettings } from '@/context/settings';
 import { SupportButton } from '@/components/SupportButton';
-import { useNotificationCount } from '@/hooks/useNotificationCount';
+import { useAdminCounters } from '@/hooks/useAdminCounters';
 import { cn } from '@/components/ui';
 
 interface NavItem {
@@ -28,6 +28,7 @@ const ADMIN_NAV: NavItem[] = [
   { to: '/admin/horarios',     label: 'Horarios',     icon: <CalendarRange   className="w-4 h-4 shrink-0" /> },
   { to: '/admin/ausencias',    label: 'Ausencias',    icon: <CalendarOff     className="w-4 h-4 shrink-0" /> },
   { to: '/admin/validaciones', label: 'Validaciones', icon: <CheckSquare     className="w-4 h-4 shrink-0" /> },
+  { to: '/admin/notificaciones', label: 'Notificaciones', icon: <Bell        className="w-4 h-4 shrink-0" /> },
   { to: '/admin/registros',    label: 'Registros',    icon: <FileText        className="w-4 h-4 shrink-0" /> },
   { to: '/admin/logs',         label: 'Accesos',      icon: <LogInIcon       className="w-4 h-4 shrink-0" /> },
   { to: '/admin/ajustes',      label: 'Ajustes',      icon: <SettingsIcon    className="w-4 h-4 shrink-0" /> },
@@ -43,6 +44,20 @@ function getInitials(name: string): string {
     .map((n) => n[0]?.toUpperCase() ?? '')
     .join('');
 }
+
+const CountBadge: React.FC<{ count: number; className: string; title?: string }> = ({
+  count, className, title,
+}) => (
+  <span
+    title={title}
+    className={cn(
+      'absolute min-w-[16px] h-4 rounded-full text-white text-[10px] font-bold leading-none grid place-items-center px-0.5 ring-2 ring-white',
+      className
+    )}
+  >
+    {count > 99 ? '99+' : count}
+  </span>
+);
 
 export const AppLayout: React.FC = () => {
   const { user, isAdmin, logout } = useAuthContext();
@@ -83,7 +98,7 @@ export const AppLayout: React.FC = () => {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const notificationCount = useNotificationCount(isAdmin);
+  const { pending, notifications } = useAdminCounters(isAdmin);
   const initials = user ? getInitials(user.name) : '?';
 
   return (
@@ -171,10 +186,11 @@ export const AppLayout: React.FC = () => {
               <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 grid place-items-center text-xs font-bold select-none">
                 {initials}
               </div>
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none grid place-items-center px-0.5 ring-2 ring-white">
-                  {notificationCount > 99 ? '99+' : notificationCount}
-                </span>
+              {notifications > 0 && (
+                <CountBadge count={notifications} title="Notificaciones sin leer" className="-top-1 -right-1 bg-red-500" />
+              )}
+              {pending > 0 && (
+                <CountBadge count={pending} title="Fichajes pendientes de validar" className="-top-1 -left-1 bg-amber-500" />
               )}
             </div>
             {isExpanded && (

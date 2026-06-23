@@ -4,6 +4,7 @@ import { attendanceService } from '@/services/api/attendance';
 import type { AttendanceRecord } from '@/types';
 import { Card, Button, FullSpinner, EmptyState, PageHeader, Badge } from '@/components/ui';
 import { useToast } from '@/context/toast';
+import { notifyCountersChanged } from '@/lib/counters';
 import { formatDate, formatTime } from '@/lib/format';
 
 export const AdminValidaciones: React.FC = () => {
@@ -28,6 +29,7 @@ export const AdminValidaciones: React.FC = () => {
     try {
       await attendanceService.validate(id, { decision });
       toast.success(decision === 'approve' ? 'Registro aprobado' : 'Registro rechazado');
+      notifyCountersChanged();
       await load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Error');

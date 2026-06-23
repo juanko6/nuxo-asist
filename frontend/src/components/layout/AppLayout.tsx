@@ -148,10 +148,12 @@ export const AppLayout: React.FC = () => {
 
         <div className="mx-2 border-t border-slate-100 shrink-0" />
 
-        {/* Soporte */}
-        <div className="p-2 shrink-0">
-          <SupportButton expanded={isExpanded} />
-        </div>
+        {/* Soporte — solo admins (contacta al equipo de nuxoasist) */}
+        {isAdmin && (
+          <div className="p-2 shrink-0">
+            <SupportButton expanded={isExpanded} />
+          </div>
+        )}
 
         <div className="mx-2 border-t border-slate-100 shrink-0" />
 
@@ -213,7 +215,7 @@ export const AppLayout: React.FC = () => {
       {/* ── Contenido principal ── */}
       <main
         className={cn(
-          'flex-1 min-w-0 min-h-screen transition-[margin] duration-200 ease-in-out',
+          'flex-1 min-w-0 min-h-screen overflow-x-hidden transition-[margin] duration-200 ease-in-out',
           isExpanded ? 'ml-56' : 'ml-16'
         )}
       >

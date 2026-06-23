@@ -4,7 +4,12 @@ import { supportService } from '@/services/api/support';
 import { useToast } from '@/context/toast';
 import { Modal, Button, Field, Input } from '@/components/ui';
 
-export const SupportButton: React.FC = () => {
+interface SupportButtonProps {
+  /** true = expandido (icono + label), false = solo icono centrado, undefined = botón icono independiente */
+  expanded?: boolean;
+}
+
+export const SupportButton: React.FC<SupportButtonProps> = ({ expanded }) => {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState('');
@@ -33,13 +38,34 @@ export const SupportButton: React.FC = () => {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        title="Soporte"
-        className="grid place-items-center w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100"
-      >
-        <LifeBuoy className="w-4 h-4" />
-      </button>
+      {expanded === true ? (
+        /* sidebar expandido: icono + label, ancho completo */
+        <button
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all w-full"
+        >
+          <LifeBuoy className="w-4 h-4 shrink-0" />
+          Soporte
+        </button>
+      ) : expanded === false ? (
+        /* sidebar colapsado: solo icono centrado */
+        <button
+          onClick={() => setOpen(true)}
+          title="Soporte"
+          className="flex items-center justify-center w-full py-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-all"
+        >
+          <LifeBuoy className="w-4 h-4" />
+        </button>
+      ) : (
+        /* uso independiente (header, etc.) */
+        <button
+          onClick={() => setOpen(true)}
+          title="Soporte"
+          className="grid place-items-center w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100"
+        >
+          <LifeBuoy className="w-4 h-4" />
+        </button>
+      )}
 
       <Modal
         open={open}

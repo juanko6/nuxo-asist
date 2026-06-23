@@ -19,6 +19,9 @@ export interface ExportRange {
 }
 
 export const attendanceService = {
+  getPendingCount: (): Promise<{ count: number }> =>
+    api.get<{ count: number }>('/attendance/pending-count'),
+
   getAll: (filters: AttendanceFilters = {}): Promise<AttendanceRecord[]> => {
     const params = new URLSearchParams();
     if (filters.date) params.set('date', filters.date);

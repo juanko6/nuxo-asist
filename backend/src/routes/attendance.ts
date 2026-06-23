@@ -143,6 +143,13 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
     return { mode: s?.geolocation_mode ?? 'off', fence };
   };
 
+  app.get('/attendance/pending-count', { preHandler: [app.authenticate, app.requireAdmin] }, async () => {
+    const { rows } = await app.pg.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM attendance WHERE status = 'pending_validation'`
+    );
+    return { count: parseInt(rows[0]?.count ?? '0', 10) };
+  });
+
   app.get('/attendance', { preHandler: [app.authenticate] }, async (request) => {
     const query = ListQuerySchema.parse(request.query);
     const conditions: string[] = [];

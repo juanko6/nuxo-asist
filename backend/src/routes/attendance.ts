@@ -578,6 +578,22 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // HU-03: el empleado confirma que sigue trabajando y pospone el cierre
+  // automático. Reinicia el aviso para volver a preguntar cuando caduque.
+  app.post('/attendance/:id/keep-open', employeeOnly, async (request) => {
+    const { id } = IdParams.parse(request.params);
+    const { rows } = await app.pg.query<AttendanceRecord>(
+      `UPDATE attendance
+         SET auto_close_snooze_until = now() + interval '60 minutes',
+             close_warning_sent_at = NULL
+       WHERE id = $1 AND employee_id = $2 AND check_out IS NULL
+       RETURNING *`,
+      [id, request.currentUser.id]
+    );
+    if (!rows[0]) throw conflict('No tienes este turno abierto');
+    return rows[0];
+  });
+
   app.post(
     '/attendance/:id/overtime/request',
     { preHandler: [app.authenticate] },

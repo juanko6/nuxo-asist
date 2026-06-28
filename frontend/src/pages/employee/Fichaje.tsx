@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   LogIn, LogOut, Coffee, Play, Bell, CheckCircle2, Plus, ShieldAlert, Hourglass, MapPin,
+  Info,
 } from 'lucide-react';
 import { attendanceService } from '@/services/api/attendance';
 import { schedulesService } from '@/services/api/schedules';
@@ -52,6 +53,7 @@ export const FichajePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => Date.now());
   const [manualOpen, setManualOpen] = useState(false);
+  const [snoozeUntil, setSnoozeUntil] = useState(0); // pospone el aviso "¿sigues ahí?"
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 20000);
@@ -69,9 +71,39 @@ export const FichajePage: React.FC = () => {
     setLoading(false);
   }, []);
 
+  // Cierra el turno vía API (no solo estado local) para que sea real y coherente
+  // con el cron del backend, que usa WHERE check_out IS NULL (no hay doble cierre).
+  const closeShift = useCallback(
+    async (iso: string, okMsg: string, coords?: { lat: number; lng: number }) => {
+      try {
+        await attendanceService.checkOut(iso, coords);
+        toast.success(okMsg);
+        await load();
+      } catch (e) {
+        toast.error(errMsg(e));
+        setSnoozeUntil(Date.now() + 5 * 60_000); // si falla, no insistir de inmediato
+      }
+    },
+    [load, toast]
+  );
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load().catch(() => setLoading(false));
+  }, [load]);
+
+  // Sincroniza con el servidor solo cuando el usuario vuelve a la pestaña
+  // (foco/visibilidad). Así, si el sistema cerró el turno automáticamente
+  // (HU-03), el front lo refleja al volver, sin polling periódico.
+  useEffect(() => {
+    const refresh = () => { load().catch(() => undefined); };
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [load]);
 
   if (loading) return <FullSpinner label="Cargando tu jornada…" />;
@@ -80,6 +112,24 @@ export const FichajePage: React.FC = () => {
   const isOpen = today !== null && today.check_out === null;
   const isPaused = isOpen && openPause !== null;
   const finished = today !== null && today.check_out !== null;
+  const systemClosed = finished && (today?.audit.some((e) => e.action === 'system_close') ?? false);
+
+  // Hora teórica de fin de la jornada de hoy (del horario activo), para el
+  // aviso "¿sigues ahí?". Mismo cálculo que el backend: fin = máx end_time,
+  // +1 día si el turno cruza medianoche.
+  const theoreticalEndMs = (() => {
+    const todays = (schedule?.days ?? []).filter((d) => d.weekday === isoWeekday(now));
+    if (todays.length === 0) return null;
+    const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const minStart = Math.min(...todays.map((d) => toMin(d.start_time)));
+    const maxEnd = Math.max(...todays.map((d) => toMin(d.end_time)));
+    const midnight = new Date(now); midnight.setHours(0, 0, 0, 0);
+    return midnight.getTime() + (maxEnd + (maxEnd <= minStart ? 1440 : 0)) * 60_000;
+  })();
+  const WARN_AFTER_MS = 10 * 60_000; // margen tras la hora de fin antes de avisar
+  const showStillThere =
+    isOpen && !isPaused && theoreticalEndMs !== null &&
+    now >= theoreticalEndMs + WARN_AFTER_MS && now >= snoozeUntil;
 
   const workedMin = (() => {
     if (!today) return 0;
@@ -169,6 +219,14 @@ export const FichajePage: React.FC = () => {
           <div className="flex items-center gap-2 px-5 py-3 bg-amber-50 text-amber-800 text-sm">
             <Hourglass className="w-4 h-4 shrink-0" />
             Este registro está pendiente de validación por tu responsable.
+          </div>
+        )}
+
+        {systemClosed && today?.check_out && (
+          <div className="flex items-center gap-2 px-5 py-3 bg-sky-50 text-sky-800 text-sm">
+            <Info className="w-4 h-4 shrink-0" />
+            Tu turno se cerró automáticamente a las {formatTime(today.check_out)} porque superó la hora
+            de salida prevista. Si no es correcto, avísale a tu responsable.
           </div>
         )}
 
@@ -304,9 +362,59 @@ export const FichajePage: React.FC = () => {
         }}
         onError={(m) => toast.error(m)}
       />
+
+      {showStillThere && today && theoreticalEndMs !== null && (
+        <StillThereModal
+          endIso={new Date(theoreticalEndMs).toISOString()}
+          onStay={async () => {
+            // Aplaza el cierre también en el backend para que el cron lo respete.
+            setSnoozeUntil(Date.now() + 60 * 60_000);
+            try {
+              await attendanceService.keepOpen(today.id);
+              await load();
+            } catch (e) {
+              toast.error(errMsg(e));
+            }
+          }}
+          onCheckoutNow={async () => {
+            try {
+              const coords = await getCoords();
+              await closeShift(new Date().toISOString(), 'Salida registrada', coords ?? undefined);
+            } catch (e) {
+              toast.error(errMsg(e));
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
+
+const StillThereModal: React.FC<{
+  endIso: string;
+  onStay: () => void;
+  onCheckoutNow: () => void;
+}> = ({ endIso, onStay, onCheckoutNow }) => (
+  <Modal
+    open
+    onClose={onStay}
+    title="¿Sigues trabajando?"
+    footer={
+      <>
+        <Button variant="secondary" block onClick={onCheckoutNow}>Fichar salida</Button>
+        <Button block onClick={onStay}>Sigo aquí</Button>
+      </>
+    }
+  >
+    <div className="space-y-2 text-sm text-slate-600">
+      <p>Tu jornada terminó a las <b>{formatTime(endIso)}</b> y sigues fichado.</p>
+      <p>
+        Si no respondes, el sistema cerrará tu turno automáticamente. Pulsa
+        <b className="text-slate-800"> «Sigo aquí» </b> si continúas trabajando.
+      </p>
+    </div>
+  </Modal>
+);
 
 const ManualEntryModal: React.FC<{
   open: boolean;

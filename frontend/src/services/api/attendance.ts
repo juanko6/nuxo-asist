@@ -76,6 +76,10 @@ export const attendanceService = {
     return api.getBlob(`/attendance/export.csv${query ? `?${query}` : ''}`);
   },
 
+  // HU-03: "Sigo aquí" — pospone el cierre automático del turno
+  keepOpen: (id: string): Promise<AttendanceRecord> =>
+    api.post<AttendanceRecord>(`/attendance/${id}/keep-open`),
+
   requestOvertime: (id: string): Promise<AttendanceRecord> =>
     api.post<AttendanceRecord>(`/attendance/${id}/overtime/request`),
 

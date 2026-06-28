@@ -19,6 +19,7 @@ interface OpenShift {
   employee_name: string;
   check_in: Date;
   close_warning_sent_at: Date | null;
+  auto_close_snooze_until: Date | null;
   theoretical_end: Date | null;
 }
 
@@ -40,6 +41,7 @@ export async function processAutoClose(
   const { rows } = await pool.query<OpenShift>(
     `WITH open_shifts AS (
        SELECT a.id, a.employee_id, a.employee_name, a.check_in, a.close_warning_sent_at,
+         a.auto_close_snooze_until,
          (a.check_in AT TIME ZONE $1)::date AS local_date,
          EXTRACT(ISODOW FROM (a.check_in AT TIME ZONE $1))::int AS weekday
        FROM attendance a
@@ -58,6 +60,7 @@ export async function processAutoClose(
        GROUP BY os.id
      )
      SELECT os.id, os.employee_id, os.employee_name, os.check_in, os.close_warning_sent_at,
+       os.auto_close_snooze_until,
        CASE WHEN b.end_time IS NOT NULL THEN
          ((os.local_date + b.end_time
            + CASE WHEN b.end_time <= b.start_time THEN interval '1 day' ELSE interval '0' END)
@@ -73,6 +76,12 @@ export async function processAutoClose(
   const nowMs = now.getTime();
 
   for (const r of rows) {
+    // El empleado confirmó que sigue trabajando ("Sigo aquí"): respetar el
+    // aplazamiento hasta que caduque, sin avisar ni cerrar.
+    if (r.auto_close_snooze_until && nowMs < new Date(r.auto_close_snooze_until).getTime()) {
+      continue;
+    }
+
     const endMs = r.theoretical_end
       ? new Date(r.theoretical_end).getTime()
       : new Date(r.check_in).getTime() + opts.maxShiftHours * 3_600_000;

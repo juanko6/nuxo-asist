@@ -10,7 +10,6 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "migrate": "pnpm --filter asist-employed-api migrate",
-    "seed": "pnpm --filter asist-employed-api seed"
+    "migrate": "pnpm --filter asist-employed-api migrate"
   }
 }

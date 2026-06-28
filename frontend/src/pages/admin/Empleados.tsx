@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Users, Plus, CalendarRange, UserX, RotateCcw, Upload, KeyRound } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Users, Plus, CalendarRange, UserX, RotateCcw, Upload, KeyRound, Search } from 'lucide-react';
 import { employeesService } from '@/services/api/employees';
 import { ImportEmpleadosModal } from './ImportEmpleadosModal';
 import { PinModal } from './PinModal';
+import { EmployeeCard } from '@/components/EmployeeCard';
 import { schedulesService } from '@/services/api/schedules';
 import type { User, UserStatus, ScheduleTemplateSummary, EmployeeScheduleView } from '@/types';
-import { Card, Button, Badge, FullSpinner, EmptyState, PageHeader, Modal, Field, Input, Select, cn } from '@/components/ui';
+import { Button, Badge, FullSpinner, EmptyState, PageHeader, Modal, Field, Input, Select, cn } from '@/components/ui';
 import { useToast } from '@/context/toast';
 import { useConfirm } from '@/context/confirm';
 import { formatDuration, formatDate } from '@/lib/format';
@@ -20,6 +21,7 @@ export const AdminEmpleados: React.FC = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [scheduleFor, setScheduleFor] = useState<User | null>(null);
   const [pinFor, setPinFor] = useState<User | null>(null);
+  const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,6 +33,14 @@ export const AdminEmpleados: React.FC = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return employees;
+    return employees.filter((e) =>
+      [e.name, e.position, e.department, e.email].some((f) => f?.toLowerCase().includes(q))
+    );
+  }, [employees, query]);
 
   const archive = async (e: User) => {
     const ok = await confirm({
@@ -76,78 +86,95 @@ export const AdminEmpleados: React.FC = () => {
         }
       />
 
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 mb-4 w-fit">
-        {(['active', 'inactive'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'px-4 py-1.5 rounded-lg text-sm font-medium transition',
-              tab === t ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
-            )}
-          >
-            {t === 'active' ? 'Activos' : 'Bajas'}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+          {(['active', 'inactive'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={cn(
+                'px-4 py-1.5 rounded-lg text-sm font-medium transition',
+                tab === t ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              )}
+            >
+              {t === 'active' ? 'Activos' : 'Bajas'}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por nombre, puesto o departamento…"
+            className="pl-9"
+          />
+        </div>
       </div>
 
       {loading ? (
         <FullSpinner label="Cargando…" />
-      ) : employees.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users className="w-10 h-10" />}
-          title={tab === 'active' ? 'Sin empleados activos' : 'No hay bajas'}
+          title={
+            query
+              ? 'Sin resultados para tu búsqueda'
+              : tab === 'active'
+                ? 'Sin empleados activos'
+                : 'No hay bajas'
+          }
         />
       ) : (
-        <div className="space-y-2.5">
-          {employees.map((e) => (
-            <Card key={e.id} className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    'grid place-items-center w-10 h-10 rounded-full font-semibold',
-                    tab === 'active' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-400'
-                  )}
-                >
-                  {e.name.charAt(0)}
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-800">{e.name}</p>
-                  <p className="text-xs text-slate-500">{e.position} · {e.department}</p>
-                </div>
-              </div>
-              {tab === 'active' ? (
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => setScheduleFor(e)}>
-                    <CalendarRange className="w-4 h-4" /> Horario
-                  </Button>
-                  <button
-                    onClick={() => setPinFor(e)}
-                    title="PIN de kiosco"
-                    className={
-                      'grid place-items-center w-9 h-9 rounded-xl hover:bg-slate-100 ' +
-                      (e.has_pin ? 'text-brand-600' : 'text-slate-400 hover:text-brand-600')
-                    }
-                  >
-                    <KeyRound className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => archive(e)}
-                    title="Dar de baja"
-                    className="grid place-items-center w-9 h-9 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                  >
-                    <UserX className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Badge tone="slate">Baja</Badge>
-                  <Button size="sm" variant="secondary" onClick={() => restore(e)}>
-                    <RotateCcw className="w-4 h-4" /> Reactivar
-                  </Button>
-                </div>
-              )}
-            </Card>
+        <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+          {filtered.map((e) => (
+            <EmployeeCard
+              key={e.id}
+              employee={e}
+              muted={tab === 'inactive'}
+              actions={
+                tab === 'active' ? (
+                  <>
+                    <button
+                      onClick={() => setScheduleFor(e)}
+                      title="Horario"
+                      className="grid place-items-center w-9 h-9 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-brand-600"
+                    >
+                      <CalendarRange className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setPinFor(e)}
+                      title="PIN de kiosco"
+                      className={cn(
+                        'grid place-items-center w-9 h-9 rounded-xl hover:bg-slate-100',
+                        e.has_pin ? 'text-brand-600' : 'text-slate-400 hover:text-brand-600'
+                      )}
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => archive(e)}
+                      title="Dar de baja"
+                      className="grid place-items-center w-9 h-9 rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600 ml-auto"
+                    >
+                      <UserX className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Badge tone="slate">Baja</Badge>
+                    <button
+                      onClick={() => restore(e)}
+                      title="Reactivar"
+                      className="grid place-items-center w-9 h-9 rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 ml-auto"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </button>
+                  </>
+                )
+              }
+            />
           ))}
         </div>
       )}

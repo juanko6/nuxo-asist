@@ -39,8 +39,7 @@ asist_employed/
 ├── backend/Dockerfile    # imagen del API (multi-stage)
 ├── frontend/Dockerfile   # build de la SPA + nginx
 ├── frontend/nginx.conf   # nginx sirve la SPA y proxyea /api
-├── docker-compose.yml    # stack de producción (db + api + web)
-├── docker-compose.dev.yml# solo la BD para desarrollo
+├── docker-compose.yml    # stack completo (db + api + web + backups)
 ├── .env.example          # configuración global de producción
 ├── pnpm-workspace.yaml
 └── package.json          # scripts del workspace
@@ -54,15 +53,15 @@ Requisitos: Node 22+, pnpm, Docker.
 # 1. Dependencias de todo el workspace (una sola vez, en la raíz)
 pnpm install
 
-# 2. Base de datos en Docker (puerto 5433; crea las BD asist y asist_test)
-docker compose -f docker-compose.dev.yml up -d
+# 2. Levantar stack completo (db + api + web)
+docker compose up -d db
 
 # 3. Variables de entorno
 cp backend/.env.example backend/.env      # revisa JWT_SECRET y APP_TIMEZONE
 cp frontend/.env.example frontend/.env    # VITE_API_URL
 
-# 4. Migraciones + datos de prueba
-pnpm seed
+# 4. Migraciones
+pnpm migrate
 
 # 5. Arrancar (en dos terminales)
 pnpm dev:api    # API en http://localhost:3000 (Swagger en /api/docs)
@@ -95,19 +94,15 @@ cp .env.example .env       # edita POSTGRES_PASSWORD y, sobre todo, JWT_SECRET
 
 # 2. Construir y levantar (db → api → web, encadenados por healthcheck)
 docker compose up -d --build
-
-# 3. Cargar el usuario admin inicial (solo la primera vez)
-docker compose --profile tools run --rm seed
 ```
 
-La aplicación queda en **http://localhost:8080** (cambia el puerto con `WEB_PORT` en el `.env`). nginx sirve la SPA y proxyea `/api` al backend, así que **todo va por el mismo origen y no hay CORS** en producción.
+La aplicación queda en **http://localhost:3000** (cambia el puerto con `WEB_PORT` en el `.env`). La API también se publica en **http://localhost:8000** (`API_PORT`) para acceso directo. nginx sirve la SPA y proxyea `/api` al backend, así que **todo va por el mismo origen y no hay CORS** en producción.
 
 Detalles del stack:
 
 - **`db`** — PostgreSQL 16 con volumen persistente `asist_db_prod`. No publica puerto al host: solo es accesible desde la red interna del compose.
 - **`api`** — aplica las migraciones automáticamente al arrancar; healthcheck contra `/api/v1/health`. No arranca hasta que la BD está `healthy`.
 - **`web`** — nginx con la SPA compilada; no arranca hasta que el API está `healthy`.
-- **`seed`** — servicio puntual (perfil `tools`), no forma parte del stack permanente. Define `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` en el `.env` para no usar las credenciales por defecto.
 
 Operación habitual:
 
@@ -118,19 +113,6 @@ docker compose up -d --build      # redeploy tras cambios de código
 docker compose down               # parar (conserva los datos)
 docker compose down -v            # parar y BORRAR la base de datos
 ```
-
-> El compose de producción usa el proyecto `asist_employed` y el de desarrollo `asist_employed_dev`: son independientes y no se pisan, puedes tener ambos sin conflicto.
-
-## Usuarios de prueba (seed)
-
-| Rol | Email | Contraseña |
-| --- | --- | --- |
-| Admin | admin@empresa.com | cambiar-admin-123 |
-| Empleado | juan@empresa.com | empleado-1234 |
-| Empleado | maria@empresa.com | empleado-1234 |
-| Empleado | carlos@empresa.com | empleado-1234 |
-
-> En producción define `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD` antes de ejecutar el seed, o cambia la contraseña tras el primer login.
 
 ## API
 
@@ -201,7 +183,7 @@ Contrato completo en [`docs/openapi.yaml`](docs/openapi.yaml). Resumen:
 
 - **Módulo de ausencias**: el admin/RRHH registra vacaciones, bajas y permisos (`/absences`); cada empleado consulta las suyas.
 - Un **cron diario** (`ABSENCE_CHECK_CRON`) detecta empleados que, según su horario activo, tenían día laborable pero no ficharon **ni** tienen una ausencia registrada, y genera un aviso in-app (`notifications` tipo `absence`). Es idempotente (un aviso por empleado y día).
-- El **envío por email** (`EMAIL_ENABLED` + `SMTP_*`, nodemailer) manda el aviso con un botón "Justificar ausencia"; si está desactivado o falla, el aviso efectivo sigue siendo la notificación in-app. En desarrollo, `docker-compose.dev.yml` levanta **Mailpit** (bandeja de prueba en http://localhost:8025).
+- El **envío por email** (`EMAIL_ENABLED` + `SMTP_*`, nodemailer) manda el aviso con un botón "Justificar ausencia"; si está desactivado o falla, el aviso efectivo sigue siendo la notificación in-app. En desarrollo, puedes levantar **Mailpit** para capturar correos de prueba: `docker run -d --name mailpit -p 8025:8025 -p 1025:1025 axllent/mailpit` y configurar `SMTP_HOST=localhost SMTP_PORT=1025`.
 
 ## Migraciones de base de datos
 
@@ -221,7 +203,7 @@ El esquema está versionado con migraciones SQL planas (estilo Flyway, *roll-for
 | `pnpm build` | Compila frontend y backend |
 | `pnpm lint` / `pnpm typecheck` | Linter / chequeo de tipos en ambos paquetes |
 | `pnpm test` | Suite TDD del backend contra Postgres real |
-| `pnpm migrate` / `pnpm seed` | Migraciones / datos iniciales |
+| `pnpm migrate` | Migraciones de base de datos |
 
 ## Flujo de trabajo (Git Flow + SemVer)
 

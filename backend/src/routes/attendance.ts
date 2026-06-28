@@ -143,6 +143,13 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
     return { mode: s?.geolocation_mode ?? 'off', fence };
   };
 
+  app.get('/attendance/pending-count', { preHandler: [app.authenticate, app.requireAdmin] }, async () => {
+    const { rows } = await app.pg.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM attendance WHERE status = 'pending_validation'`
+    );
+    return { count: parseInt(rows[0]?.count ?? '0', 10) };
+  });
+
   app.get('/attendance', { preHandler: [app.authenticate] }, async (request) => {
     const query = ListQuerySchema.parse(request.query);
     const conditions: string[] = [];
@@ -569,6 +576,22 @@ export const attendanceRoutes: FastifyPluginAsync = async (app) => {
     } finally {
       client.release();
     }
+  });
+
+  // HU-03: el empleado confirma que sigue trabajando y pospone el cierre
+  // automático. Reinicia el aviso para volver a preguntar cuando caduque.
+  app.post('/attendance/:id/keep-open', employeeOnly, async (request) => {
+    const { id } = IdParams.parse(request.params);
+    const { rows } = await app.pg.query<AttendanceRecord>(
+      `UPDATE attendance
+         SET auto_close_snooze_until = now() + interval '60 minutes',
+             close_warning_sent_at = NULL
+       WHERE id = $1 AND employee_id = $2 AND check_out IS NULL
+       RETURNING *`,
+      [id, request.currentUser.id]
+    );
+    if (!rows[0]) throw conflict('No tienes este turno abierto');
+    return rows[0];
   });
 
   app.post(

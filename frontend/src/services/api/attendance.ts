@@ -19,6 +19,9 @@ export interface ExportRange {
 }
 
 export const attendanceService = {
+  getPendingCount: (): Promise<{ count: number }> =>
+    api.get<{ count: number }>('/attendance/pending-count'),
+
   getAll: (filters: AttendanceFilters = {}): Promise<AttendanceRecord[]> => {
     const params = new URLSearchParams();
     if (filters.date) params.set('date', filters.date);
@@ -72,6 +75,10 @@ export const attendanceService = {
     const query = params.toString();
     return api.getBlob(`/attendance/export.csv${query ? `?${query}` : ''}`);
   },
+
+  // HU-03: "Sigo aquí" — pospone el cierre automático del turno
+  keepOpen: (id: string): Promise<AttendanceRecord> =>
+    api.post<AttendanceRecord>(`/attendance/${id}/keep-open`),
 
   requestOvertime: (id: string): Promise<AttendanceRecord> =>
     api.post<AttendanceRecord>(`/attendance/${id}/overtime/request`),

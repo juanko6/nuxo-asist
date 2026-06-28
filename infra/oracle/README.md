@@ -91,10 +91,6 @@ configuración**: el cliente crea ahí el nombre de su empresa y su cuenta de
 administrador (no hay usuarios de prueba en producción). A partir de ese momento,
 el acceso es por login normal y el admin da de alta a sus empleados.
 
-> Solo para una demo con datos de ejemplo (admin + empleados ficticios) puedes
-> ejecutar `docker compose --profile tools run --rm seed`. En un despliegue real
-> **no lo hagas**: deja que el cliente use el asistente.
-
 ## 4. (Más adelante) HTTPS con dominio
 
 Cuando tengas un dominio apuntando (registro A) a la IP pública, en la instancia:

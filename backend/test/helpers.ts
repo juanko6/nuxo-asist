@@ -6,7 +6,7 @@ import type { AppConfig } from '../src/config.js';
 import type { Role } from '../src/types.js';
 
 const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? 'postgres://asist:asist@localhost:5433/asist_test';
+  process.env.TEST_DATABASE_URL ?? 'postgres://asist:asist@localhost:5432/asist_test';
 
 export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return {

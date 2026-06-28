@@ -6,6 +6,7 @@ import { processAutoClose, type AutoCloseOptions } from '../src/lib/autoClose.js
 describe('HU-03: cierre automático de turno', () => {
   let app: FastifyInstance;
   let anaId: string;
+  let anaToken: string;
 
   const opts: AutoCloseOptions = {
     timezone: 'UTC',
@@ -36,6 +37,7 @@ describe('HU-03: cierre automático de turno', () => {
       name: 'Ana López',
     });
     anaId = ana.id;
+    anaToken = ana.token;
   });
 
   async function giveSchedule(
@@ -103,6 +105,64 @@ describe('HU-03: cierre automático de turno', () => {
 
     const au = await app.pg.query('SELECT action FROM attendance_audit WHERE attendance_id = $1', [id]);
     expect(au.rows.some((r: { action: string }) => r.action === 'system_close')).toBe(true);
+  });
+
+  it('no cierra si el empleado aplazó el cierre ("Sigo aquí") y el snooze sigue vigente', async () => {
+    await giveSchedule(fullTime);
+    const id = await seedOpenShift('2026-06-10T08:00:00.000Z');
+    // El empleado confirma a las 17:11; snooze vigente hasta las 18:11
+    await app.pg.query(
+      `UPDATE attendance SET auto_close_snooze_until = $2 WHERE id = $1`,
+      [id, '2026-06-10T18:11:00.000Z']
+    );
+
+    // Pasada la hora + grace, pero dentro del snooze: no avisa ni cierra
+    const res = await processAutoClose(app.pg, opts, at('2026-06-10T17:31:00.000Z'));
+
+    expect(res.warned).toHaveLength(0);
+    expect(res.closed).toHaveLength(0);
+    const a = await app.pg.query('SELECT check_out FROM attendance WHERE id = $1', [id]);
+    expect(a.rows[0].check_out).toBeNull();
+  });
+
+  it('cierra una vez que el snooze de "Sigo aquí" ha caducado', async () => {
+    await giveSchedule(fullTime);
+    const id = await seedOpenShift('2026-06-10T08:00:00.000Z');
+    await app.pg.query(
+      `UPDATE attendance SET auto_close_snooze_until = $2 WHERE id = $1`,
+      [id, '2026-06-10T18:11:00.000Z']
+    );
+
+    // Tras caducar el snooze (18:11) y pasado el grace respecto a la hora teórica
+    const res = await processAutoClose(app.pg, opts, at('2026-06-10T18:31:00.000Z'));
+
+    expect(res.closed).toContain(id);
+    const a = await app.pg.query('SELECT check_out FROM attendance WHERE id = $1', [id]);
+    expect(new Date(a.rows[0].check_out).toISOString()).toBe('2026-06-10T17:00:00.000Z');
+  });
+
+  it('keep-open aplaza el cierre y reinicia el aviso', async () => {
+    await giveSchedule(fullTime);
+    const id = await seedOpenShift('2026-06-10T08:00:00.000Z');
+    // Ya se había avisado antes
+    await app.pg.query(
+      `UPDATE attendance SET close_warning_sent_at = $2 WHERE id = $1`,
+      [id, '2026-06-10T17:16:00.000Z']
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/v1/attendance/${id}/keep-open`,
+      headers: { authorization: `Bearer ${anaToken}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const a = await app.pg.query(
+      'SELECT auto_close_snooze_until, close_warning_sent_at FROM attendance WHERE id = $1',
+      [id]
+    );
+    expect(a.rows[0].auto_close_snooze_until).not.toBeNull();
+    expect(a.rows[0].close_warning_sent_at).toBeNull();
   });
 
   it('no toca un turno aún dentro de su horario', async () => {

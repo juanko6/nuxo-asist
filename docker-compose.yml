@@ -1,6 +1,5 @@
 # Stack de producción: todo en un servidor con `docker compose up -d`.
 # Requiere un .env en la raíz (copia .env.example y ajusta los valores).
-# Para la BD de desarrollo en local usa docker-compose.dev.yml.
 
 # Nombre de proyecto propio para no colisionar con el stack de desarrollo
 name: asist_employed
@@ -13,9 +12,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?definir en .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?definir en .env}
       POSTGRES_DB: ${POSTGRES_DB:?definir en .env}
+    ports:
+      # Solo localhost: permite ejecutar scripts desde el host (seed) sin exponer
+      # Postgres a la red. En la VM de producción queda accesible únicamente desde
+      # la propia máquina, nunca desde internet.
+      - "127.0.0.1:5432:5432"
     volumes:
       - asist_db_prod:/var/lib/postgresql/data
-    # Sin ports: la BD solo es accesible desde la red interna del compose
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -27,11 +30,16 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     restart: unless-stopped
+    ports:
+      # Solo localhost: acceso directo a la API desde el host (debug/Swagger) sin
+      # exponerla a la red. El frontend la proxyea por el mismo origen vía nginx,
+      # así que en producción no necesita estar publicada hacia fuera.
+      - "127.0.0.1:${API_PORT:-8000}:3000"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET:?definir en .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
       APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Madrid}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -71,7 +79,7 @@ services:
       dockerfile: frontend/Dockerfile
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "${WEB_PORT:-3000}:80"
     depends_on:
       api:
         condition: service_healthy
@@ -98,23 +106,6 @@ services:
       BACKUP_KEEP_MONTHS: ${BACKUP_KEEP_MONTHS:-48}
     volumes:
       - asist_backups:/backups
-    depends_on:
-      db:
-        condition: service_healthy
-
-  # Datos iniciales (admin + empleados demo). Uso puntual:
-  #   docker compose --profile tools run --rm seed
-  seed:
-    profiles: ["tools"]
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-      target: build
-    command: pnpm --filter asist-employed-api seed
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@empresa.com}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-cambiar-admin-123}
     depends_on:
       db:
         condition: service_healthy

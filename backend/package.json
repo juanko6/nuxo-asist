@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "migrate": "tsx src/db/migrate.ts",
-    "seed": "tsx scripts/seed.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
@@ -17,7 +17,7 @@
   "dependencies": {
     "@fastify/cors": "^11.0.0",
     "@fastify/helmet": "^13.0.2",
-    "@fastify/jwt": "^9.0.0",
+    "@fastify/jwt": "^10.1.0",
     "@fastify/rate-limit": "^11.0.0",
     "@fastify/swagger": "^9.0.0",
     "@fastify/swagger-ui": "^5.0.0",
@@ -25,7 +25,7 @@
     "dotenv": "^16.4.0",
     "fastify": "^5.0.0",
     "node-cron": "^4.2.1",
-    "nodemailer": "^9.0.0",
+    "nodemailer": "^9.0.1",
     "pg": "^8.13.0",
     "zod": "^3.24.0"
   },

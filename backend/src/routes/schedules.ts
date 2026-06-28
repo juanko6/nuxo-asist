@@ -32,8 +32,12 @@ const IdParams = z.object({ id: z.string().uuid() });
 
 const isUniqueViolation = (err: unknown): boolean =>
   typeof err === 'object' && err !== null && (err as { code?: string }).code === '23505';
-const isForeignKeyViolation = (err: unknown): boolean =>
-  typeof err === 'object' && err !== null && (err as { code?: string }).code === '23503';
+const isForeignKeyViolation = (err: unknown): boolean => {
+  // 23503 = foreign_key_violation (PG ≤17); 23001 = restrict_violation, que es
+  // como PostgreSQL 18 reporta una violación de FK con ON DELETE RESTRICT.
+  const code = typeof err === 'object' && err !== null ? (err as { code?: string }).code : undefined;
+  return code === '23503' || code === '23001';
+};
 
 /** Minutos de un bloque; si end <= start cruza medianoche (turno nocturno). */
 const blockMinutes = (start: string, end: string): number => {

@@ -10,9 +10,9 @@ name: asist_employed
 
 services:
   api:
-    image: ghcr.io/juanko6/asist_employed-api:${IMAGE_TAG:-latest}
+    image: ghcr.io/juanko6/nuxo-asist-api:${IMAGE_TAG:-latest}
     pull_policy: always
 
   web:
-    image: ghcr.io/juanko6/asist_employed-web:${IMAGE_TAG:-latest}
+    image: ghcr.io/juanko6/nuxo-asist-web:${IMAGE_TAG:-latest}
     pull_policy: always

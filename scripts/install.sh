@@ -16,7 +16,7 @@
 #
 set -euo pipefail
 
-REPO_URL="https://github.com/juanko6/asist_employed.git"
+REPO_URL="https://github.com/juanko6/nuxo-asist.git"
 REPO_REF="${NUXOASIST_REF:-main}"
 TARGET_DIR="${NUXOASIST_DIR:-/opt/nuxoasist}"
 CHECK_ONLY=false

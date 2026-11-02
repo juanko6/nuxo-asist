@@ -1,6 +1,6 @@
 # Sistema de Control de Asistencia de Empleados
 
-[![CI](https://github.com/sefogi/asist_employed/actions/workflows/ci.yml/badge.svg)](https://github.com/sefogi/asist_employed/actions/workflows/ci.yml)
+[![CI](https://github.com/juanko6/nuxo-asist/actions/workflows/ci.yml/badge.svg)](https://github.com/juanko6/nuxo-asist/actions/workflows/ci.yml)
 
 Sistema de gestión de asistencia laboral: los empleados fichan entrada/salida y solicitan horas extra; el administrador gestiona empleados, aprueba horas extra y exporta reportes.
 
@@ -25,7 +25,7 @@ Sistema de gestión de asistencia laboral: los empleados fichan entrada/salida y
 Monorepo con [pnpm workspaces](https://pnpm.io/workspaces):
 
 ```
-asist_employed/
+nuxo-asist/
 ├── frontend/             # SPA React (asist-employed-web)
 │   ├── src/
 │   └── package.json
@@ -80,7 +80,7 @@ tipo "doctor" que comprueba/instala requisitos, descarga el repo, prepara el `.e
 **[docs/DESPLIEGUE.md](docs/DESPLIEGUE.md)**:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/juanko6/asist_employed/main/scripts/install.sh -o nuxoasist-install.sh
+curl -fsSL https://raw.githubusercontent.com/juanko6/nuxo-asist/main/scripts/install.sh -o nuxoasist-install.sh
 sudo bash nuxoasist-install.sh            # usa --check para solo diagnosticar
 ```
 
@@ -227,7 +227,7 @@ GitHub Actions en [`.github/workflows/`](.github/workflows):
   - `docker`: construye las imágenes de API y web para validar los Dockerfiles.
 
   Usa caché de pnpm y de capas Docker (GHA) para acelerar; cancela ejecuciones obsoletas de la misma rama.
-- **`release.yml`** — al crear un tag `vX.Y.Z`, construye y publica las imágenes de producción en GHCR (`ghcr.io/sefogi/asist_employed-api` y `-web`). El despliegue automático en un servidor se añadirá cuando exista uno.
+- **`release.yml`** — al crear un tag `vX.Y.Z`, construye y publica las imágenes de producción en GHCR (`ghcr.io/juanko6/nuxo-asist-api` y `-web`). El despliegue automático en un servidor se añadirá cuando exista uno.
 
 ## Configuración inicial (onboarding)
 
@@ -263,15 +263,15 @@ El backlog funcional detallado está en [docs/historias-usuario.md](docs/histori
 (HU-01 a HU-08, alineadas con la Ley de control horario 2026).
 
 - [x] **Fase 1** — Backend propio (Fastify + PostgreSQL), bcrypt + JWT, contrato OpenAPI, TDD
-- [x] **Fase 2** ([#1](https://github.com/sefogi/asist_employed/issues/1)) — Dockerización completa (frontend + API + BD + nginx) para un solo servidor
-- [x] **Fase 3** ([#2](https://github.com/sefogi/asist_employed/issues/2)) — CI/CD con GitHub Actions (lint + tests + build de imágenes); deploy a servidor pendiente de infraestructura
-- [x] **Fase 4** ([#3](https://github.com/sefogi/asist_employed/issues/3)) — Núcleo legal del registro horario: pausas + auditoría inalterable + export (HU-04), horarios y cargas horarias (HU-05)
-- [x] **Fase 5** ([#4](https://github.com/sefogi/asist_employed/issues/4)) — Incidencias y automatización: registro olvidado (HU-02), cierre automático de turno (HU-03), ausencias injustificadas + módulo de vacaciones/bajas (HU-01; email preparado para Fase 7)
-- [x] **Fase 6** ([#5](https://github.com/sefogi/asist_employed/issues/5)) — Rediseño UX/UI (mobile-first, routing, sistema de diseño) + confirmación de acciones con hora de intención (HU-06)
-- [x] **Fase 7** ([#6](https://github.com/sefogi/asist_employed/issues/6)) — Hardening: rate-limiting + helmet, email real (SMTP), backups con retención 4 años, HTTPS con Caddy
-- [ ] **Despliegue** ([#8](https://github.com/sefogi/asist_employed/issues/8)) — Oracle Cloud con Terraform (red + Ampere A1 capa gratuita); IaC en [`infra/oracle/`](infra/oracle/)
-- [x] **Fase 8** ([#7](https://github.com/sefogi/asist_employed/issues/7)) — Avanzadas: geolocalización RGPD con geocerca (HU-07), modo kiosco PIN/QR (HU-08)
+- [x] **Fase 2** — Dockerización completa (frontend + API + BD + nginx) para un solo servidor
+- [x] **Fase 3** — CI/CD con GitHub Actions (lint + tests + build de imágenes); deploy a servidor pendiente de infraestructura
+- [x] **Fase 4** — Núcleo legal del registro horario: pausas + auditoría inalterable + export (HU-04), horarios y cargas horarias (HU-05)
+- [x] **Fase 5** — Incidencias y automatización: registro olvidado (HU-02), cierre automático de turno (HU-03), ausencias injustificadas + módulo de vacaciones/bajas (HU-01; email preparado para Fase 7)
+- [x] **Fase 6** — Rediseño UX/UI (mobile-first, routing, sistema de diseño) + confirmación de acciones con hora de intención (HU-06)
+- [x] **Fase 7** — Hardening: rate-limiting + helmet, email real (SMTP), backups con retención 4 años, HTTPS con Caddy
+- [ ] **Despliegue** — Oracle Cloud con Terraform (red + Ampere A1 capa gratuita); IaC en [`infra/oracle/`](infra/oracle/)
+- [x] **Fase 8** — Avanzadas: geolocalización RGPD con geocerca (HU-07), modo kiosco PIN/QR (HU-08)
 
 ## Licencia
 
-MIT — ver [LICENSE.MD](LICENSE.MD).
+MIT — ver [LICENSE](LICENSE).

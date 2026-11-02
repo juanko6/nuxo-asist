@@ -274,4 +274,4 @@ El backlog funcional detallado está en [docs/historias-usuario.md](docs/histori
 
 ## Licencia
 
-MIT — ver [LICENSE.MD](LICENSE.MD).
+MIT — ver [LICENSE](LICENSE).
